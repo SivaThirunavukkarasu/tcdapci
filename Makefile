@@ -1,7 +1,12 @@
 # SPDX-License-Identifier: GPL-2.0
-# Copyright(c) 2020 Egor Pomozov.
+# Copyright(c) 2020 DeGirum Corp., Egor Pomozov.
 #
-# CDA linux driver to access pci devices
+# CDA linux driver mem blocks/mem maps and interrupt request handler
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
 TARGET_MODULE := cdapci
 
 BUILDDIR ?= /lib/modules/$(shell uname -r)/build

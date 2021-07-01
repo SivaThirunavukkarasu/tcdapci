@@ -1,4 +1,12 @@
-/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
+// SPDX-License-Identifier: LGPL-3.0
+// Copyright(c) 2020 DeGirum Corp., Egor Pomozov.
+//
+// CDA linux driver mem blocks/mem maps and interrupt request handler
+//
+// This program is free software; you can redistribute it and/or modify it
+// under the terms and conditions of the Lesser GNU General Public License,
+// version 3, as published by the Free Software Foundation.
+//
 #ifndef LINUX_VERSION_CODE
 #include <stdint.h> // only include if we're not compiling against the kernel
 #endif

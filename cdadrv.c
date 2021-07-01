@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright(c) 2020 Egor Pomozov.
+// Copyright(c) 2020 DeGirum Corp., Egor Pomozov.
 //
-// CDA linux driver to access pci devices
+// CDA linux driver mem blocks/mem maps and interrupt request handler
 //
-
+// This program is free software; you can redistribute it and/or modify it
+// under the terms and conditions of the GNU General Public License,
+// version 2, as published by the Free Software Foundation.
+//
 #include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/init.h>
@@ -11,7 +14,7 @@
 #include "cdadrv.h"
 #include "cdaioctl.h"
 
-MODULE_AUTHOR("Egor Pomozov");
+MODULE_AUTHOR("DeGirum Corp., Egor Pomozov");
 MODULE_DESCRIPTION("DCA linux driver to access pci devices");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.1");
@@ -20,7 +23,6 @@ MODULE_VERSION("0.1");
 #error Too old kernel
 #endif
 
-// 
 static dev_t cdadev_first;
 static const char cda_name[] = "cda";
 static int req_pci_did = 0;
@@ -273,10 +275,10 @@ static long cda_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 	struct cda_dev *cdadev = file->private_data;
 	switch (cmd) {
 
-	case CDA_ALLOC_MEM: //0xC0084301
+	case CDA_ALLOC_MEM:
 		return cda_alloc_mem(cdadev, (void __user *)arg);
 
-	case CDA_FREE_MEM: //0x40084302
+	case CDA_FREE_MEM:
 		return cda_free_mem_by_idx(cdadev, (void __user *)arg);
 
 	case CDA_MAP_MEM:
@@ -285,7 +287,7 @@ static long cda_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 	case CDA_UNMAP_MEM:
 		return cda_unmap_mem_by_idx(cdadev, (void __user *)arg);
 
-	case CDA_INIT_INT: //0xC0084305
+	case CDA_INIT_INT:
 		return cda_init_interrupts(cdadev, (void __user *)arg);
 
 	case CDA_FREE_INT:

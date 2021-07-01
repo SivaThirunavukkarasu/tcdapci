@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright(c) 2020 Egor Pomozov.
+// Copyright(c) 2020 DeGirum Corp., Egor Pomozov.
 //
 // CDA linux driver mem blocks/mem maps and interrupt request handler
+//
+// This program is free software; you can redistribute it and/or modify it
+// under the terms and conditions of the GNU General Public License,
+// version 2, as published by the Free Software Foundation.
 //
 #include <linux/interrupt.h>
 #include <linux/sched.h>
@@ -66,7 +70,7 @@ int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
 	struct cda_interrupts *ints;
 
 	if( cdadev->ints ) {
-		printk("Interrupts are already attached");
+		//printk("Interrupts are already attached");
 		return -EINVAL; // Already attached
 	}
 	if( copy_from_user(&req, (void __user *)ureq, sizeof(req)) )
@@ -88,7 +92,6 @@ int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
 			return ret;
 		}
 		dev_warn(&cdadev->pcidev->dev, "No MSI-X vectors, try MSI. Error %x\n", ret);
-		// fall-through
 	case MSI:
 		nvecs = pci_alloc_irq_vectors_affinity(cdadev->pcidev, 1, req.vectors, PCI_IRQ_MSI, NULL);
 		if( nvecs > 0 ) {
@@ -97,7 +100,6 @@ int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
 			break;
 		}
 		dev_warn(&cdadev->pcidev->dev, "No MSI vectors, try legacy. Error %x\n", nvecs);
-		// fall-through
 	case LEGACY_INTERRUPT:
 		ints->num = 1;
 		ints->type = LEGACY_INTERRUPT;
@@ -136,9 +138,9 @@ int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
 
 	if( !ret ) {
 		cdadev->ints = ints;
-		return ret; // Good exit
+		return ret;
 	}
-
+	// Fail. Release
 	for( i -= 1; i >= 0; i-- ) {
 		struct cda_vector *vec = &ints->vecs[i];
 		free_irq(vec->irq, vec);
@@ -213,7 +215,7 @@ int cda_req_int(struct cda_dev *cdadev, void __user *ureq)
 		vec->busy = false;
 	}
 	mutex_unlock(&cdadev->ilock);
-	printk("Interrupt vector %d timeout: %ld count %u reset %d\n", req.vector, timeout, count, req.reset);
+	//printk("Interrupt vector %d timeout: %ld count %u reset %d\n", req.vector, timeout, count, req.reset);
 	return timeout > 0 ? 0 : timeout == 0 ? -ETIME : timeout;
 }
 

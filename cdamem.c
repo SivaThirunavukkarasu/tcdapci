@@ -2,11 +2,15 @@
 // Copyright(c) 2020 Egor Pomozov.
 //
 // Originally memalloc sequence was designed for simple driver
-// in Aquantia Corp by Vadim Solomin
-// Later was updated by QA team in Aquantia Corp/Marvell Inc.
+// in Aquantia Corp by Vadim Solomin 
+// Later was updated by QA team in Aquantia Corp.
 // Later it was additionally modifyied by Egor Pomozov
 // 
 // CDA linux driver memory request handler
+//
+// This program is free software; you can redistribute it and/or modify it
+// under the terms and conditions of the GNU General Public License,
+// version 2, as published by the Free Software Foundation.
 //
 
 #include <linux/fs.h>
@@ -46,33 +50,30 @@ struct cda_mblk {
 	struct cda_dev *dev;
 	int index;
 
-	/* struct vmarea *mapping; */
-	struct list_head list;
 	struct kobject kobj;
-	struct bin_attribute mmap_attr;
-
-	void *vaddr; //in-kernel
-	dma_addr_t paddr;
+	uint32_t req_size;
+	void *vaddr; //kernel
 	uint32_t size;
-	uint32_t real_size;
+	dma_addr_t paddr;
+	struct list_head list;
+	struct bin_attribute mmap_attr;
 };
 
 struct cda_mmap {
 	struct cda_dev *dev;
 	int index;
 
-	/* struct vmarea *mapping; */
-	struct list_head list;
 	struct kobject kobj;
-	struct bin_attribute mmap_attr;
 
-	void *vaddr; //original
-	uint32_t size; //original
+	void *vaddr; //original user
+	uint32_t size; //original user
 	uint32_t blk_cnt;
 	uint32_t mapped_blk_cnt;
 	struct sg_table sgt;
 	struct page **pages;
 	struct cda_drv_sg_item *sg_list;
+	struct list_head list;
+	struct bin_attribute mmap_attr;
 };
 
 struct mblkitem_sysfs_entry {
@@ -94,7 +95,7 @@ struct mblkitem_sysfs_entry {
 cda_dev_mblk_attr(vaddr, "0x%lx\n");
 cda_dev_mblk_attr(paddr, "0x%lx\n");
 cda_dev_mblk_attr(size, "0x%x\n");
-cda_dev_mblk_attr(real_size, "0x%x\n");
+cda_dev_mblk_attr(req_size, "0x%x\n");
 cda_dev_mblk_attr(index, "%d\n");
 #pragma GCC diagnostic warning "-Wformat"
 
@@ -162,7 +163,6 @@ cda_dev_memmap_attr(blk_cnt, "%d\n");
 static ssize_t
 memmap_sglist_show(struct cda_mmap *memmap, char *buf)
 {
-	//return (ssize_t)memcpy(buf, memmap->sg_list, memmap->mapped_blk_cnt * sizeof(struct cda_drv_sg_item));
 	int i, res = 0;
 	buf[0] = '\0';
 	for( i = 0; i < memmap->blk_cnt; i++ ) {
@@ -220,11 +220,29 @@ static int mblk_mmap( struct file *file,
 {
 	struct cda_mblk *mblk = attr->private;
 	unsigned long requested = (vma->vm_end - vma->vm_start) >> PAGE_SHIFT;
-	unsigned long pages = (unsigned long)mblk->real_size >> PAGE_SHIFT;
+	unsigned long pages = (unsigned long)mblk->req_size >> PAGE_SHIFT;
 
 	if (vma->vm_pgoff + requested > pages)
 		return -EINVAL;
-	
+
+	#if defined(__arm__) || defined(__aarch64__)
+	// ARM SMMU requires special remapping for coherent memory
+#ifdef pgprot_dmacoherent
+	vma->vm_page_prot = pgprot_dmacoherent(vma->vm_page_prot);
+#else // pgprot_dmacoherent
+    if( dma_mmap_coherent(  &mblk->dev->pcidev->dev,
+							vma,
+							mblk->vaddr,
+							mblk->paddr,
+							mblk->req_size) )
+    {
+        dev_err(&mblk->dev->pcidev->dev, "ARM DMA remapping failed");
+        return -ENXIO;
+    }
+    return 0;
+#endif // pgprot_dmacoherent
+#endif
+
 	if (remap_pfn_range(vma, vma->vm_start, mblk->paddr >> PAGE_SHIFT,
 			    vma->vm_end - vma->vm_start, vma->vm_page_prot))
 		return -EAGAIN;
@@ -244,7 +262,7 @@ int cda_publish_mblk(struct cda_mblk *mblk)
 	mmap_attr->mmap = mblk_mmap;
 	mmap_attr->attr.name = "mmap";
 	mmap_attr->attr.mode = S_IRUSR | S_IWUSR;
-	mmap_attr->size = mblk->real_size;
+	mmap_attr->size = mblk->req_size;
 	mmap_attr->private = mblk;
 	ret = sysfs_create_bin_file(&mblk->kobj, mmap_attr);
 	if (ret)
@@ -263,7 +281,6 @@ void cda_hide_mblk(struct cda_mblk *mblk)
 {
 	sysfs_remove_bin_file(&mblk->kobj, &mblk->mmap_attr);
 	kobject_del(&mblk->kobj);
-	//kobject_put(&mblk->kobj);
 }
 
 int cda_publish_memmap(struct cda_mmap *memmap)
@@ -275,9 +292,7 @@ int cda_publish_memmap(struct cda_mmap *memmap)
 			    		"%04d", memmap->index);
 	if (ret)
 		goto err_add;
-	/*
-	mmap_attr->mmap = memmap_mmap;
-	*/
+
 	mmap_attr->attr.name = "memmapobj";
 	mmap_attr->attr.mode = S_IRUSR | S_IWUSR;
 	mmap_attr->size = memmap->size;
@@ -299,7 +314,6 @@ void cda_hide_memmap(struct cda_mmap *memmap)
 {
 	sysfs_remove_bin_file(&memmap->kobj, &memmap->mmap_attr);
 	kobject_del(&memmap->kobj);
-	//kobject_put(&memmap->kobj);
 }
 
 int cda_alloc_mem(struct cda_dev *dev, void __user *ureq)
@@ -342,10 +356,9 @@ int cda_alloc_mem(struct cda_dev *dev, void __user *ureq)
 		dev_err(&dev->dev, "Can't alloc DMA memory (size %u)", req.size);
 		goto err_dma_alloc;
 	}
-	mblk->real_size = req.size;
-	printk("DMA alloc vaddr %p, paddr %llx, size %d\n", mblk->vaddr, mblk->paddr, req.size);
+	mblk->req_size = req.size;
+	//printk("DMA alloc vaddr %p, paddr %llx, size %d\n", mblk->vaddr, mblk->paddr, req.size);
 
-	//mblk->index = req.index = (int)((mblk->paddr >> 12) & 0xffffffff);
 	ret = cda_publish_mblk(mblk);
 	if (ret) {
 		dev_err(&dev->dev, "Can't publish mblk to sysfs: %d", ret);
@@ -366,7 +379,7 @@ int cda_alloc_mem(struct cda_dev *dev, void __user *ureq)
 err_copy_to_user:
 	cda_hide_mblk(mblk);
 err_publish:
-	dma_free_coherent(&dev->pcidev->dev, mblk->real_size,
+	dma_free_coherent(&dev->pcidev->dev, mblk->req_size,
 			    mblk->vaddr, mblk->paddr);
 err_dma_alloc:
 	spin_lock(&dev->mblk_sl);
@@ -380,10 +393,10 @@ out:
 
 static void cda_free_mem(struct cda_mblk *mblk)
 {
-	printk("DMA free vaddr %p, paddr %llx, size %d\n",
-		mblk->vaddr, mblk->paddr, mblk->real_size);
+	//printk("DMA free vaddr %p, paddr %llx, size %d\n",
+		mblk->vaddr, mblk->paddr, mblk->req_size);
 	cda_hide_mblk(mblk);
-	dma_free_coherent(&mblk->dev->pcidev->dev, mblk->real_size,
+	dma_free_coherent(&mblk->dev->pcidev->dev, mblk->req_size,
 		mblk->vaddr, mblk->paddr);
 	kobject_put(&mblk->kobj);
 }
@@ -415,7 +428,6 @@ void cda_free_dev_mem(struct cda_dev *dev)
 	struct list_head mblks;
 	spin_lock(&dev->mblk_sl);
 
-	//idr_destroy(&dev->mblk_idr);
 	list_replace_init(&dev->mem_blocks, &mblks);
 	spin_unlock(&dev->mblk_sl);
 	list_for_each_entry_safe(mblk, tmp, &mblks, list) {
@@ -423,23 +435,8 @@ void cda_free_dev_mem(struct cda_dev *dev)
 	}
 };
 
-/* Safely return a page to the OS. * /
-static bool cda_release_page(struct page *page)
-{
-	if (!page)
-		return false;
-	/ *
-	if (!PageReserved(page))
-		SetPageDirty(page);
-	unpin_user_page(page);
-	* /
-	unpin_user_pages_dirty_lock(&page, 1, 1);
-	return true;
-}
-*/
 static void cda_release_map(struct cda_mmap *memmap)
 {	
-	//pci_dma_sync_sg_for_cpu(memmap->dev->pcidev, memmap->sgt.sgl, memmap->sgt.orig_nents, DMA_BIDIRECTIONAL);
 	pci_unmap_sg(memmap->dev->pcidev, memmap->sgt.sgl, memmap->sgt.orig_nents, DMA_BIDIRECTIONAL);
 	unpin_user_pages_dirty_lock(memmap->pages, memmap->blk_cnt, 1);
 	memmap->mapped_blk_cnt = 0;
@@ -460,7 +457,6 @@ static int cda_perform_mapping(
 		unsigned int nbytes =
 			min_t(unsigned int, PAGE_SIZE - offset, len);
 
-		//flush_dcache_page(memmap->pages[i]);
 		sg_set_page(sg, memmap->pages[i], nbytes, offset);
 
 		buf += nbytes;
@@ -478,7 +474,7 @@ static int cda_perform_mapping(
 		cda_sg_list[i].size = sg_dma_len(sg);
 		cda_sg_list[i].paddr = sg_dma_address(sg);
 	}
-	//pci_dma_sync_sg_for_device(memmap->dev->pcidev, memmap->sgt.sgl, memmap->sgt.orig_nents, DMA_BIDIRECTIONAL);
+
 	memmap->mapped_blk_cnt = nents;
 	return 0;
 }
@@ -565,7 +561,7 @@ int cda_map_mem(struct cda_dev *dev, void __user *ureq)
 	list_add(&memmap->list, &dev->mem_maps);
 	spin_unlock(&dev->mblk_sl);
 
-	printk("map vaddr %p, pages %d\n", memmap->vaddr, npages);
+	//printk("map vaddr %p, pages %d\n", memmap->vaddr, npages);
 	return 0;
 
 err_copy_to_user:
@@ -592,7 +588,7 @@ out:
 
 static void cda_free_map(struct cda_mmap *memmap)
 {
-	printk("unmap vaddr %p, pages %d\n", memmap->vaddr, memmap->blk_cnt);
+	//printk("unmap vaddr %p, pages %d\n", memmap->vaddr, memmap->blk_cnt);
 	cda_hide_memmap(memmap);
 	cda_release_map(memmap);
 	kobject_put(&memmap->kobj);
