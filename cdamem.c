@@ -103,7 +103,7 @@ static struct attribute *mblk_attrs[] = {
 	&mblk_vaddr_attr.attr,
 	&mblk_paddr_attr.attr,
 	&mblk_size_attr.attr,
-	&mblk_real_size_attr.attr,
+	&mblk_req_size_attr.attr,
 	&mblk_index_attr.attr,
 	NULL,
 };
@@ -394,7 +394,7 @@ out:
 static void cda_free_mem(struct cda_mblk *mblk)
 {
 	//printk("DMA free vaddr %p, paddr %llx, size %d\n",
-		mblk->vaddr, mblk->paddr, mblk->req_size);
+	//	mblk->vaddr, mblk->paddr, mblk->req_size);
 	cda_hide_mblk(mblk);
 	dma_free_coherent(&mblk->dev->pcidev->dev, mblk->req_size,
 		mblk->vaddr, mblk->paddr);

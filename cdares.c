@@ -92,6 +92,7 @@ int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
 			return ret;
 		}
 		dev_warn(&cdadev->pcidev->dev, "No MSI-X vectors, try MSI. Error %x\n", ret);
+		// fall-through
 	case MSI:
 		nvecs = pci_alloc_irq_vectors_affinity(cdadev->pcidev, 1, req.vectors, PCI_IRQ_MSI, NULL);
 		if( nvecs > 0 ) {
@@ -100,6 +101,7 @@ int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
 			break;
 		}
 		dev_warn(&cdadev->pcidev->dev, "No MSI vectors, try legacy. Error %x\n", nvecs);
+		// fall-through
 	case LEGACY_INTERRUPT:
 		ints->num = 1;
 		ints->type = LEGACY_INTERRUPT;
@@ -247,7 +249,7 @@ int cda_check_bars(struct cda_dev *cdadev)
 			printk("Store resource %d flag: 0x%lx\n", i, res_child->flags);
 			if( IORESOURCE_BUSY & res_child->flags ) {
 				res_child->flags &= ~IORESOURCE_BUSY;
-				printk("Drop busy bit for resource %d", i);
+				//printk("Drop busy bit for resource %d", i);
 			}
 		}
 	}
