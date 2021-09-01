@@ -225,11 +225,11 @@ static int mblk_mmap( struct file *file,
 	if (vma->vm_pgoff + requested > pages)
 		return -EINVAL;
 
-	#if defined(__arm__) || defined(__aarch64__)
+	//#if defined(__arm__) || defined(__aarch64__)
 	// ARM SMMU requires special remapping for coherent memory
-#ifdef pgprot_dmacoherent
-	vma->vm_page_prot = pgprot_dmacoherent(vma->vm_page_prot);
-#else // pgprot_dmacoherent
+	//#ifdef pgprot_dmacoherent
+	//vma->vm_page_prot = pgprot_dmacoherent(vma->vm_page_prot);
+	//#else // pgprot_dmacoherent
     if( dma_mmap_coherent(  &mblk->dev->pcidev->dev,
 							vma,
 							mblk->vaddr,
@@ -239,14 +239,21 @@ static int mblk_mmap( struct file *file,
         dev_err(&mblk->dev->pcidev->dev, "ARM DMA remapping failed");
         return -ENXIO;
     }
+	//printk("Map DMA Coherent buffer to user space, vma %p, vaddr %p, paddr %llx\n",
+	//	vma, mblk->vaddr, mblk->paddr >> PAGE_SHIFT);
+	//printk("Dump vaddr[0]: 0x%08x\n", ((uint32_t *)mblk->vaddr)[0]);
     return 0;
-#endif // pgprot_dmacoherent
-#endif
-
-	if (remap_pfn_range(vma, vma->vm_start, mblk->paddr >> PAGE_SHIFT,
-			    vma->vm_end - vma->vm_start, vma->vm_page_prot))
-		return -EAGAIN;
-	return 0;
+	//#endif // pgprot_dmacoherent
+	//#else
+	//vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	//#endif
+	//printk("Map DMA Coherent buffer to user space, vma %p, vaddr %p, paddr %llx\n",
+	//	vma, mblk->vaddr, mblk->paddr >> PAGE_SHIFT);
+	//printk("Dump vaddr[0]: 0x%08x\n", ((uint32_t *)mblk->vaddr)[0]);
+	//if (remap_pfn_range(vma, vma->vm_start, mblk->paddr >> PAGE_SHIFT,
+	//		    vma->vm_end - vma->vm_start, vma->vm_page_prot))
+	//	return -EAGAIN;
+	//return 0;
 }
 
 int cda_publish_mblk(struct cda_mblk *mblk)
