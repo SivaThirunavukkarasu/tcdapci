@@ -69,6 +69,7 @@ struct cda_mmap {
 	uint32_t size; //original user
 	uint32_t blk_cnt;
 	uint32_t mapped_blk_cnt;
+	uint32_t show_cnt;
 	struct sg_table sgt;
 	struct page **pages;
 	struct cda_drv_sg_item *sg_list;
@@ -163,9 +164,17 @@ cda_dev_memmap_attr(blk_cnt, "%d\n");
 static ssize_t
 memmap_sglist_show(struct cda_mmap *memmap, char *buf)
 {
-	int i, res = 0;
+	const int sg_list_item_size = 16 + 8 + 2; //"%016llx %08lx\n"
+	int res = 0;
+	int i = memmap->show_cnt;
+	memmap->show_cnt = 0;
 	buf[0] = '\0';
-	for( i = 0; i < memmap->blk_cnt; i++ ) {
+	for( ; i < memmap->blk_cnt; i++ ) {
+		if( (res + sg_list_item_size) >= (PAGE_SIZE - 1)) /* https://lwn.net/Articles/178634/ */{
+			memmap->show_cnt = i;
+			//printk("Split SG list. Next read starts with item: %d\n", i);
+			break;
+		}
 		res += sprintf(&buf[res], "%016llx %08lx\n", memmap->sg_list[i].paddr, memmap->sg_list[i].size);
 	}
 	return res;
