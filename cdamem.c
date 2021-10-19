@@ -277,7 +277,7 @@ int cda_publish_mblk(struct cda_mblk *mblk)
 
 	mmap_attr->mmap = mblk_mmap;
 	mmap_attr->attr.name = "mmap";
-	mmap_attr->attr.mode = S_IRUSR | S_IWUSR;
+	mmap_attr->attr.mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 	mmap_attr->size = mblk->req_size;
 	mmap_attr->private = mblk;
 	ret = sysfs_create_bin_file(&mblk->kobj, mmap_attr);
@@ -310,7 +310,7 @@ int cda_publish_memmap(struct cda_mmap *memmap)
 		goto err_add;
 
 	mmap_attr->attr.name = "memmapobj";
-	mmap_attr->attr.mode = S_IRUSR | S_IWUSR;
+	mmap_attr->attr.mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 	mmap_attr->size = memmap->size;
 	mmap_attr->private = memmap;
 	ret = sysfs_create_bin_file(&memmap->kobj, mmap_attr);
