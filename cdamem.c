@@ -370,6 +370,7 @@ int cda_alloc_mem(struct cda_dev *dev, void __user *ureq)
 		in_atomic() ? (GFP_ATOMIC | GFP_DMA32) : GFP_KERNEL);
 	if (!mblk->vaddr) {
 		dev_err(&dev->dev, "Can't alloc DMA memory (size %u)", req.size);
+		ret = -1;
 		goto err_dma_alloc;
 	}
 	mblk->req_size = req.size;
