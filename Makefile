@@ -38,7 +38,6 @@ clean:
 install:
 	sudo -E $(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) modules_install
 	@sudo -E depmod
-	echo 1: $(IS_SYSTEMD_USED), 2: $(IS_THERE_CDA_GROUP), 3: $(IS_USER_IN_CDA_GROUP)
 ifneq ($(IS_SYSTEMD_USED),other)
 	@echo $(TARGET_MODULE) | sudo -E tee -i /etc/modules-load.d/cdapci.conf > /dev/null
 else
