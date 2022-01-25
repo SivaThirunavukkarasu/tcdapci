@@ -21,6 +21,138 @@
 #include "cdadrv.h"
 #include "cdaioctl.h"
 
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,6,0)
+/**
+ * pin_user_pages_fast() - pin user pages in memory without taking locks
+ *
+ * For now, this is a placeholder function, until various call sites are
+ * converted to use the correct get_user_pages*() or pin_user_pages*() API. So,
+ * this is identical to get_user_pages_fast().
+ *
+ * This is intended for Case 1 (DIO) in Documentation/vm/pin_user_pages.rst. It
+ * is NOT intended for Case 2 (RDMA: long-term pins).
+ */
+static int pin_user_pages_fast(unsigned long start, int nr_pages,
+			unsigned int gup_flags, struct page **pages)
+{
+	/*
+	 * This is a placeholder, until the pin functionality is activated.
+	 * Until then, just behave like the corresponding get_user_pages*()
+	 * routine.
+	 */
+	return get_user_pages_fast(start, nr_pages, gup_flags, pages);
+}
+
+/**
+ * unpin_user_page() - release a gup-pinned page
+ * @page:            pointer to page to be released
+ *
+ * Pages that were pinned via pin_user_pages*() must be released via either
+ * unpin_user_page(), or one of the unpin_user_pages*() routines. This is so
+ * that eventually such pages can be separately tracked and uniquely handled. In
+ * particular, interactions with RDMA and filesystems need special handling.
+ *
+ * unpin_user_page() and put_page() are not interchangeable, despite this early
+ * implementation that makes them look the same. unpin_user_page() calls must
+ * be perfectly matched up with pin*() calls.
+ */
+static inline void unpin_user_page(struct page *page)
+{
+	put_page(page);
+}
+
+/**
+ * unpin_user_pages() - release an array of gup-pinned pages.
+ * @pages:  array of pages to be marked dirty and released.
+ * @npages: number of pages in the @pages array.
+ *
+ * For each page in the @pages array, release the page using unpin_user_page().
+ *
+ * Please see the unpin_user_page() documentation for details.
+ */
+static void unpin_user_pages(struct page **pages, unsigned long npages)
+{
+	unsigned long index;
+
+	/*
+	 * TODO: this can be optimized for huge pages: if a series of pages is
+	 * physically contiguous and part of the same compound page, then a
+	 * single operation to the head page should suffice.
+	 */
+	for (index = 0; index < npages; index++)
+		unpin_user_page(pages[index]);
+}
+
+/**
+ * unpin_user_pages_dirty_lock() - release and optionally dirty gup-pinned pages
+ * @pages:  array of pages to be maybe marked dirty, and definitely released.
+ * @npages: number of pages in the @pages array.
+ * @make_dirty: whether to mark the pages dirty
+ *
+ * "gup-pinned page" refers to a page that has had one of the get_user_pages()
+ * variants called on that page.
+ *
+ * For each page in the @pages array, make that page (or its head page, if a
+ * compound page) dirty, if @make_dirty is true, and if the page was previously
+ * listed as clean. In any case, releases all pages using unpin_user_page(),
+ * possibly via unpin_user_pages(), for the non-dirty case.
+ *
+ * Please see the unpin_user_page() documentation for details.
+ *
+ * set_page_dirty_lock() is used internally. If instead, set_page_dirty() is
+ * required, then the caller should a) verify that this is really correct,
+ * because _lock() is usually required, and b) hand code it:
+ * set_page_dirty_lock(), unpin_user_page().
+ *
+ */
+static void unpin_user_pages_dirty_lock(struct page **pages, unsigned long npages,
+				 bool make_dirty)
+{
+	unsigned long index;
+
+	/*
+	 * TODO: this can be optimized for huge pages: if a series of pages is
+	 * physically contiguous and part of the same compound page, then a
+	 * single operation to the head page should suffice.
+	 */
+
+	if (!make_dirty) {
+		unpin_user_pages(pages, npages);
+		return;
+	}
+
+	for (index = 0; index < npages; index++) {
+		struct page *page = compound_head(pages[index]);
+		/*
+		 * Checking PageDirty at this point may race with
+		 * clear_page_dirty_for_io(), but that's OK. Two key
+		 * cases:
+		 *
+		 * 1) This code sees the page as already dirty, so it
+		 * skips the call to set_page_dirty(). That could happen
+		 * because clear_page_dirty_for_io() called
+		 * page_mkclean(), followed by set_page_dirty().
+		 * However, now the page is going to get written back,
+		 * which meets the original intention of setting it
+		 * dirty, so all is well: clear_page_dirty_for_io() goes
+		 * on to call TestClearPageDirty(), and write the page
+		 * back.
+		 *
+		 * 2) This code sees the page as clean, so it calls
+		 * set_page_dirty(). The page stays dirty, despite being
+		 * written back, so it gets written back again in the
+		 * next writeback cycle. This is harmless.
+		 */
+		if (!PageDirty(page))
+			set_page_dirty_lock(page);
+		unpin_user_page(page);
+	}
+}
+
+#endif
+
 static ssize_t name_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)

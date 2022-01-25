@@ -52,7 +52,7 @@ static int cda_cdev_release(struct inode *ino, struct file *file);
 static long cda_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 
 static struct pci_device_id cda_pci_ids[] = {
-	{ PCI_DEVICE(0x1f0d, 0x100) }, 
+	{ PCI_DEVICE(0x1f0d, 0x100) },
 	{ PCI_DEVICE(0, 0) }, 
 	{ PCI_DEVICE(0, 0) },
 };
@@ -329,7 +329,7 @@ static int __init cdadrv_init(void)
 	if( ret )
 		goto err_cls_reg;
 
-	if( (!req_pci_did || !req_pci_vid) && pci_id_table_size >= 2 ) {
+	if( (req_pci_did || req_pci_vid) && pci_id_table_size >= 2 ) {
 		cda_pci_ids[pci_id_table_size-2].vendor = req_pci_vid;
 		cda_pci_ids[pci_id_table_size-2].device = req_pci_did;
 	}
