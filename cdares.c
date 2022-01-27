@@ -64,7 +64,8 @@ static irqreturn_t cda_isr(int irq, void *priv)
 
 int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
 {
-	int ret, nvecs, i;
+	int ret = 0;
+	int nvecs, i;
 	struct cda_vector *vec;
 	struct cda_int_lock req;
 	struct cda_interrupts *ints;
@@ -94,7 +95,11 @@ int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
 		dev_warn(&cdadev->pcidev->dev, "No MSI-X vectors, try MSI. Error %x\n", ret);
 		// fall-through
 	case MSI:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+		nvecs = pci_alloc_irq_vectors(cdadev->pcidev, 1, req.vectors, PCI_IRQ_MSI);
+#else
 		nvecs = pci_alloc_irq_vectors_affinity(cdadev->pcidev, 1, req.vectors, PCI_IRQ_MSI, NULL);
+#endif
 		if( nvecs > 0 ) {
 			ints->num = nvecs;
 			ints->type = MSI;

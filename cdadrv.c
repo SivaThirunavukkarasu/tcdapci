@@ -19,7 +19,7 @@ MODULE_DESCRIPTION("DCA linux driver to access pci devices");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.1");
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4,12,0)
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4,9,0)
 #error Too old kernel
 #endif
 
