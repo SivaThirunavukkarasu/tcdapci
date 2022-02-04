@@ -272,3 +272,35 @@ void cda_restore_bars(struct cda_dev *cdadev)
 		}
 	}
 }
+
+int cda_sem_aq(struct cda_dev *cdadev, void __user *ureq)
+{
+	int res = 0;
+	struct cda_sem_aq req;
+	u64 cur_time;
+	if (copy_from_user(&req, ureq, sizeof(req)))
+		return -EFAULT;
+
+	mutex_lock(&cdadev->ilock);
+	cur_time = ktime_get_ns();
+	if( cdadev->semaphores[req.sem_id] < cur_time ) {
+		cdadev->semaphores[req.sem_id] = cur_time + req.time_ns > cur_time ? cur_time + req.time_ns : 0xFFFFFFFFFFFFFFFFULL;
+	} else {
+		res = 1;
+	}
+	mutex_unlock(&cdadev->ilock);
+	return res;
+}
+
+int cda_sem_rel(struct cda_dev *cdadev, void __user *ureq)
+{
+	int res = 0;
+	int req_sem;
+	if (copy_from_user(&req_sem, ureq, sizeof(req_sem)))
+		return -EFAULT;
+
+	mutex_lock(&cdadev->ilock);
+	cdadev->semaphores[req_sem] = 0ULL;
+	mutex_unlock(&cdadev->ilock);
+	return res;
+}

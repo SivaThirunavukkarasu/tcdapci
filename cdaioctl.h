@@ -20,6 +20,8 @@
 #define CDA_FREE_INT _IOW(CDA_IOCTL_MAGIC, 0x6, long)
 #define CDA_REQ_INT _IOWR(CDA_IOCTL_MAGIC, 0x7, long)
 #define CDA_INT_CANCEL _IOWR(CDA_IOCTL_MAGIC, 0x8, long)
+#define CDA_SEM_AQ _IOW(CDA_IOCTL_MAGIC, 0x9, long)
+#define CDA_SEM_REL _IOW(CDA_IOCTL_MAGIC, 0xA, long)
 
 struct cda_alloc_mem {
 	uint32_t size;
@@ -52,4 +54,9 @@ enum int_type {
 struct cda_int_lock {
 	uint32_t inttype;
 	uint32_t vectors;
+};
+
+struct cda_sem_aq {
+	uint32_t sem_id;
+	uint64_t time_ns;
 };

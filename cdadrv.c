@@ -301,6 +301,12 @@ static long cda_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 	case CDA_INT_CANCEL:
 		return cda_cancel_req(cdadev);
 
+	case CDA_SEM_AQ: 
+		return cda_sem_aq(cdadev, (void __user *) arg);
+
+	case CDA_SEM_REL:
+		return cda_sem_rel(cdadev, (void __user *) arg);
+
 	default:
 		return -ENOTTY;
 	}
@@ -330,6 +336,8 @@ static int __init cdadrv_init(void)
 		goto err_cls_reg;
 
 	if( (req_pci_did || req_pci_vid) && pci_id_table_size >= 2 ) {
+		// Last table element is 0,0
+		// Update pre-last item
 		cda_pci_ids[pci_id_table_size-2].vendor = req_pci_vid;
 		cda_pci_ids[pci_id_table_size-2].device = req_pci_did;
 	}

@@ -11,6 +11,9 @@
 #include <linux/cdev.h>
 #include <linux/version.h>
 
+
+#define CDA_MAX_DRV_SEMAPHORES (16)
+
 struct cda_interrupts;
 struct cda_dev {
     struct cdev cdev;
@@ -30,6 +33,8 @@ struct cda_dev {
 	spinlock_t mblk_sl;
 	struct list_head mem_blocks;
 	struct list_head mem_maps;
+
+	u64 semaphores[CDA_MAX_DRV_SEMAPHORES];
 };
 
 int cda_alloc_mem(struct cda_dev *dev, void __user *arg);
@@ -46,3 +51,5 @@ int cda_req_int(struct cda_dev *dev, void __user *ureq);
 int cda_cancel_req(struct cda_dev *dev);
 int cda_check_bars(struct cda_dev *cdadev);
 void cda_restore_bars(struct cda_dev *cdadev);
+int cda_sem_aq(struct cda_dev *cdadev, void __user *ureq);
+int cda_sem_rel(struct cda_dev *cdadev, void __user *ureq);
