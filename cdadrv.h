@@ -35,21 +35,23 @@ struct cda_dev {
 	struct list_head mem_maps;
 
 	u64 semaphores[CDA_MAX_DRV_SEMAPHORES];
+	void *sem_owner[CDA_MAX_DRV_SEMAPHORES];
 };
 
-int cda_alloc_mem(struct cda_dev *dev, void __user *arg);
-int cda_free_mem_by_idx(struct cda_dev *dev, void __user *ureq);
-int cda_map_mem(struct cda_dev *dev, void __user *arg);
-int cda_unmap_mem_by_idx(struct cda_dev *dev, void __user *ureq);
-void cda_unmmap_dev_mem(struct cda_dev *dev);
-void cda_free_dev_mem(struct cda_dev *dev);
-int cda_init_interrupts(struct cda_dev *dev, void __user *ureq);
+int cda_alloc_mem(struct cda_dev *dev, void *owner, void __user *arg);
+int cda_free_mem_by_idx(struct cda_dev *dev, void *owner, void __user *ureq);
+int cda_map_mem(struct cda_dev *dev, void *owner, void __user *arg);
+int cda_unmap_mem_by_idx(struct cda_dev *dev, void *owner, void __user *ureq);
+void cda_unmmap_dev_mem(struct cda_dev *dev, void *owner);
+void cda_free_dev_mem(struct cda_dev *dev, void *owner);
+int cda_init_interrupts(struct cda_dev *dev, void *owner, void __user *ureq);
 int cda_mems_create(struct cda_dev *dev);
-int cda_free_irqs(struct cda_dev *dev);
+int cda_free_irqs(struct cda_dev *dev, void *owner);
 void cda_mems_release(struct cda_dev *dev);
-int cda_req_int(struct cda_dev *dev, void __user *ureq);
-int cda_cancel_req(struct cda_dev *dev);
+int cda_req_int(struct cda_dev *dev, void *owner, void __user *ureq);
+int cda_cancel_req(struct cda_dev *dev, void *owner);
 int cda_check_bars(struct cda_dev *cdadev);
 void cda_restore_bars(struct cda_dev *cdadev);
-int cda_sem_aq(struct cda_dev *cdadev, void __user *ureq);
-int cda_sem_rel(struct cda_dev *cdadev, void __user *ureq);
+int cda_sem_aq(struct cda_dev *cdadev, void *owner, void __user *ureq);
+int cda_sem_rel(struct cda_dev *cdadev, void *owner, void __user *ureq);
+void cda_sem_rel_by_owner(struct cda_dev *dev, void *owner);

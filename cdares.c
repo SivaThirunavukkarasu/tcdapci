@@ -25,6 +25,7 @@ struct cda_vector {
 struct cda_interrupts {
 	int num;
 	enum int_type type;
+	void *owner;
 	struct cda_vector *vecs;
 	struct msix_entry *msix_entries;
 };
@@ -62,7 +63,7 @@ static irqreturn_t cda_isr(int irq, void *priv)
 	return IRQ_HANDLED;
 }
 
-int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
+int cda_init_interrupts(struct cda_dev *cdadev, void *owner, void __user *ureq)
 {
 	int ret = 0;
 	int nvecs, i;
@@ -81,6 +82,7 @@ int cda_init_interrupts(struct cda_dev *cdadev, void __user *ureq)
 	if( !ints )
 		return -ENOMEM;
 
+	ints->owner = owner;
 	switch( req.inttype ) {
 	case MSIX:
 		ret = cda_alloc_msix(cdadev, req.vectors, ints);
@@ -162,10 +164,16 @@ err_alloc_vecs:
 	return ret;
 }
 
-int cda_free_irqs(struct cda_dev *cdadev)
+int cda_free_irqs(struct cda_dev *cdadev, void *owner)
 {
 	int i;
 	struct cda_interrupts *ints;
+	if( cdadev->ints == NULL )
+		return -EINVAL;
+	if( cdadev->ints->owner != owner ) {
+		//dev_err(&cdadev->pcidev->dev, "Interrupts are not owned by %p", owner);
+		return -EINVAL;
+	}
 	mutex_lock(&cdadev->ilock);
 	ints = cdadev->ints;
 	cdadev->ints = NULL;
@@ -187,7 +195,7 @@ int cda_free_irqs(struct cda_dev *cdadev)
 	return 0;
 }
 
-int cda_req_int(struct cda_dev *cdadev, void __user *ureq)
+int cda_req_int(struct cda_dev *cdadev, void *owner, void __user *ureq)
 {
 	struct cda_interrupts *ints;
 	struct cda_req_int req;
@@ -197,6 +205,14 @@ int cda_req_int(struct cda_dev *cdadev, void __user *ureq)
 
 	if (copy_from_user(&req, ureq, sizeof(req)))
 		return -EFAULT;
+
+	if( cdadev->ints == NULL )
+		return -EINVAL;
+
+	if( cdadev->ints->owner != owner ) {
+		dev_err(&cdadev->pcidev->dev, "Interrupts are not owned by %p", owner);
+		return -EINVAL;
+	}
 
 	mutex_lock(&cdadev->ilock);
 	ints = cdadev->ints;
@@ -226,10 +242,18 @@ int cda_req_int(struct cda_dev *cdadev, void __user *ureq)
 	return timeout > 0 ? 0 : timeout == 0 ? -ETIME : timeout;
 }
 
-int cda_cancel_req(struct cda_dev *cdadev)
+int cda_cancel_req(struct cda_dev *cdadev, void *owner)
 {
 	int i;
 	struct cda_interrupts *ints;
+	if( cdadev->ints == NULL )
+		return -EINVAL;
+
+	if( cdadev->ints->owner != owner ) {
+		//dev_err(&cdadev->pcidev->dev, "Interrupts are not owned by %p", owner);
+		return -EINVAL;
+	}
+
 	mutex_lock(&cdadev->ilock);
 	ints = cdadev->ints;
 	for (i = 0; ints && i < ints->num; i++) {
@@ -273,7 +297,7 @@ void cda_restore_bars(struct cda_dev *cdadev)
 	}
 }
 
-int cda_sem_aq(struct cda_dev *cdadev, void __user *ureq)
+int cda_sem_aq(struct cda_dev *cdadev, void *owner, void __user *ureq)
 {
 	int res = 0;
 	struct cda_sem_aq req;
@@ -285,6 +309,7 @@ int cda_sem_aq(struct cda_dev *cdadev, void __user *ureq)
 	cur_time = ktime_get_ns();
 	if( cdadev->semaphores[req.sem_id] < cur_time ) {
 		cdadev->semaphores[req.sem_id] = cur_time + req.time_ns > cur_time ? cur_time + req.time_ns : 0xFFFFFFFFFFFFFFFFULL;
+		cdadev->sem_owner[req.sem_id] = owner;
 	} else {
 		res = 1;
 	}
@@ -292,15 +317,32 @@ int cda_sem_aq(struct cda_dev *cdadev, void __user *ureq)
 	return res;
 }
 
-int cda_sem_rel(struct cda_dev *cdadev, void __user *ureq)
+int cda_sem_rel(struct cda_dev *cdadev, void *owner, void __user *ureq)
 {
 	int res = 0;
 	int req_sem;
 	if (copy_from_user(&req_sem, ureq, sizeof(req_sem)))
 		return -EFAULT;
-
-	mutex_lock(&cdadev->ilock);
-	cdadev->semaphores[req_sem] = 0ULL;
-	mutex_unlock(&cdadev->ilock);
+	if( cdadev->sem_owner[req_sem] != owner ) {
+		dev_warn(&cdadev->pcidev->dev, "Semaphore %d is not owned by %p", req_sem, owner);
+	} else {
+		mutex_lock(&cdadev->ilock);
+		cdadev->semaphores[req_sem] = 0ULL;
+		cdadev->sem_owner[req_sem] = NULL;
+		mutex_unlock(&cdadev->ilock);
+	}
 	return res;
+}
+
+void cda_sem_rel_by_owner(struct cda_dev *dev, void *owner)
+{
+	uint32_t i;
+	mutex_lock(&dev->ilock);
+	for( i = 0; i < CDA_MAX_DRV_SEMAPHORES; i++ ) {
+		if( dev->sem_owner[i] == owner ) {
+			dev->semaphores[i] = 0ULL;
+			dev->sem_owner[i] = NULL;
+		}
+	}
+	mutex_unlock(&dev->ilock);
 }

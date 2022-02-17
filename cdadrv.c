@@ -237,9 +237,9 @@ static void cda_pci_remove(struct pci_dev *pcidev)
 
 	cda_restore_bars(cdadev);
 
-	cda_free_irqs(cdadev);
-    cda_unmmap_dev_mem(cdadev);
-    cda_free_dev_mem(cdadev);
+	cda_free_irqs(cdadev, NULL);
+    cda_unmmap_dev_mem(cdadev, NULL);
+    cda_free_dev_mem(cdadev, NULL);
 
 	pci_release_regions(pcidev);
 	pci_disable_device(pcidev);
@@ -268,6 +268,15 @@ out:
 static int cda_cdev_release(struct inode *ino, struct file *file)
 {
 	struct cda_dev *cdadev = file->private_data;
+	if (!cdadev)
+		return -ENODEV;
+
+	cda_cancel_req(cdadev, (void *)file);
+	cda_free_irqs(cdadev, (void *)file);
+    cda_unmmap_dev_mem(cdadev, (void *)file);
+    cda_free_dev_mem(cdadev, (void *)file);
+    cda_sem_rel_by_owner(cdadev, (void *)file);
+
 	put_device(&cdadev->dev);
 	return 0;
 }
@@ -278,34 +287,34 @@ static long cda_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 	switch (cmd) {
 
 	case CDA_ALLOC_MEM:
-		return cda_alloc_mem(cdadev, (void __user *)arg);
+		return cda_alloc_mem(cdadev, (void *)file, (void __user *)arg);
 
 	case CDA_FREE_MEM:
-		return cda_free_mem_by_idx(cdadev, (void __user *)arg);
+		return cda_free_mem_by_idx(cdadev, (void *)file, (void __user *)arg);
 
 	case CDA_MAP_MEM:
-		return cda_map_mem(cdadev, (void __user *)arg);
+		return cda_map_mem(cdadev, (void *)file, (void __user *)arg);
 
 	case CDA_UNMAP_MEM:
-		return cda_unmap_mem_by_idx(cdadev, (void __user *)arg);
+		return cda_unmap_mem_by_idx(cdadev, (void *)file, (void __user *)arg);
 
 	case CDA_INIT_INT:
-		return cda_init_interrupts(cdadev, (void __user *)arg);
+		return cda_init_interrupts(cdadev, (void *)file, (void __user *)arg);
 
 	case CDA_FREE_INT:
-		return cda_free_irqs(cdadev);
+		return cda_free_irqs(cdadev, (void *)file);
 
 	case CDA_REQ_INT: 
-		return cda_req_int(cdadev, (void __user *) arg);
+		return cda_req_int(cdadev, (void *)file, (void __user *) arg);
 
 	case CDA_INT_CANCEL:
-		return cda_cancel_req(cdadev);
+		return cda_cancel_req(cdadev, (void *)file);
 
 	case CDA_SEM_AQ: 
-		return cda_sem_aq(cdadev, (void __user *) arg);
+		return cda_sem_aq(cdadev, (void *)file, (void __user *) arg);
 
 	case CDA_SEM_REL:
-		return cda_sem_rel(cdadev, (void __user *) arg);
+		return cda_sem_rel(cdadev, (void *)file, (void __user *) arg);
 
 	default:
 		return -ENOTTY;
