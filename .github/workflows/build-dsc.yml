@@ -1,4 +1,5 @@
 name: GitHub Actions Demo
+on: [push]
 jobs:
   Build-DSC:
     runs-on: ubuntu-latest
