@@ -6,9 +6,14 @@ jobs:
     steps:
       - run: sudo apt install gnupg dput dh-make devscripts lintian
       - run: sudo apt install dpkg-dev
+      - run: mkdir workspace
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: Check out repository code
         uses: actions/checkout@v2
+      - run: cp ${{ github.workspace }}/* workspace
+      - run: rm -rf workspace/repository-setup
+      - run: cd workspace
+      - run: debuild -S
       - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
       - run: echo "🖥️ The workflow is now ready to test your code on the runner."
       - name: List files in the repository
