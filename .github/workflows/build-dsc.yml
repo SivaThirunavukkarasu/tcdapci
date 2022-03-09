@@ -6,10 +6,10 @@ jobs:
     steps:
       - run: sudo apt install gnupg dput dh-make devscripts lintian
       - run: sudo apt install dpkg-dev
-      - run: mkdir workspace
-      - run: cd workspace
       - name: Check out repository code
         uses: actions/checkout@v2
+        with:
+          path: workspace
       - run: rm -rf ${{ github.workspace }}/workspace/repository-setup
       - name: Import GPG key
         id: import_gpg
