@@ -1,2 +1,1 @@
 verbose
-basedir ${{ github.workspace }}/repository
