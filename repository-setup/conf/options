@@ -1,3 +1,2 @@
 verbose
-ask-passphrase
-basedir /var/www/repo
+basedir ${{ github.workspace }}/repository
