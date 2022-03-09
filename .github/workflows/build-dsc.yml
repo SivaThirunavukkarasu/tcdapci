@@ -6,9 +6,11 @@ jobs:
     steps:
       - run: sudo apt install gnupg dput dh-make devscripts lintian
       - run: sudo apt install dpkg-dev
+      - run: mkdir workspace
+      - run: cd workspace
       - name: Check out repository code
         uses: actions/checkout@v2
-      - run: rm -rf ${{ github.workspace }}/repository-setup
+      - run: rm -rf ${{ github.workspace }}/workspace/repository-setup
       - name: Import GPG key
         id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v4
@@ -22,6 +24,7 @@ jobs:
       - name: List result files
         run: |
           ls ${{ github.home }}
-      - run: cd ..
-      - run: ls -l
+      - name: List result files 2
+        run: |
+          ls ${{ github.workspace }}/workspace
       - run: echo "🍏 This job's status is ${{ job.status }}."
