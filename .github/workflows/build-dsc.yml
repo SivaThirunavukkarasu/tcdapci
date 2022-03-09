@@ -21,12 +21,13 @@ jobs:
         working-directory: ${{ github.workspace }}/workspace
       - run: echo "DSC package built!"
       - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
+        run: ls ${{ github.workspace }}
       - name: List result files
-        run: |
-          ls ${{ github.home }}
+        run: ls ${{ github.home }}
       - name: List result files 2
-        run: |
-          ls ${{ github.workspace }}/workspace
+        run: ls ${{ github.workspace }}/workspace
       - run: sudo apt install reprepro
+      - run: reprepro includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
+        working-directory: ${{ github.workspace }}/repository
+      - name: List result files 3
+        run: ls ${{ github.workspace }}/repository
