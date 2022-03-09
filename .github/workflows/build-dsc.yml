@@ -27,7 +27,7 @@ jobs:
       - name: List result files 2
         run: ls ${{ github.workspace }}/workspace
       - run: sudo apt install reprepro
-      - run: reprepro includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
+      - run: reprepro --basedir ${{ github.workspace }}/repository includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
         working-directory: ${{ github.workspace }}/repository
       - name: List result files 3
         run: ls ${{ github.workspace }}/repository
