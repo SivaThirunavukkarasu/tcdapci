@@ -18,6 +18,7 @@ jobs:
           gpg_private_key: ${{ secrets.DRIVER_GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
       - run: debuild -S
+        working-directory: ${{ github.workspace }}/workspace
       - name: List files in the repository
         run: |
           ls ${{ github.workspace }}
