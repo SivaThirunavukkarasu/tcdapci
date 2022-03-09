@@ -10,6 +10,12 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v2
       - run: rm -rf ${{ github.workspace }}/repository-setup
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v4
+        with:
+          gpg_private_key: ${{ secrets.DRIVER_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
       - run: debuild -S
       - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
       - run: echo "🖥️ The workflow is now ready to test your code on the runner."
