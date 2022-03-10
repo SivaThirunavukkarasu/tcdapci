@@ -1,40 +1,44 @@
-name: Debian Source Package and Repo build
+name: Debian Source Package and Repository build
 on: [push]
 jobs:
   Build-DSC-Repo:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt install gnupg dput dh-make devscripts lintian
-      - run: sudo apt install dpkg-dev
+      - name: Install prerequisites
+        run: sudo apt install gnupg dput dh-make devscripts lintian dpkg-dev reprepro
       - name: Check out repository code
         uses: actions/checkout@v2
         with:
           path: workspace
-      - run: mv ${{ github.workspace }}/workspace/repository-setup ${{ github.workspace }}/repository
+      - name: Relocate repository building configuration
+        run: mv ${{ github.workspace }}/workspace/repository-setup ${{ github.workspace }}/repository
       - name: Import GPG key
         id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v4
         with:
           gpg_private_key: ${{ secrets.DRIVER_GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
-      - run: debuild -S
+      - name: Build package
+        run: debuild -S
         working-directory: ${{ github.workspace }}/workspace
       - run: echo "DSC package built!"
-      - run: sudo apt install reprepro
       - name: Check out target repository code
         uses: actions/checkout@v2
         with:
           path: target
           repository: DeGirum/DeGirum.github.io
           token: ${{ secrets.PRIVATE_TOKEN }}
-      - run: rm -rf ${{ github.workspace }}/target/apt-repo
-      - run: mv ${{ github.workspace }}/repository ${{ github.workspace }}/target/apt-repo
-      - run: reprepro --basedir ${{ github.workspace }}/target/apt-repo includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
+      - name: Prepare repository build
+        run: |
+          rm -rf ${{ github.workspace }}/target/apt-repo
+          mv ${{ github.workspace }}/repository ${{ github.workspace }}/target/apt-repo
+      - name: Build repository
+        run: reprepro --basedir ${{ github.workspace }}/target/apt-repo includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
         working-directory: ${{ github.workspace }}/target/apt-repo
-      - run: ls ${{ github.workspace }}/target/apt-repo
-      - run: rm -rf ${{ github.workspace }}/target/apt-repo/db
-      - run: rm -rf ${{ github.workspace }}/target/apt-repo/conf
-      - run: ls ${{ github.workspace }}/target/apt-repo
+      - name: Clean up repository build files
+        run: |
+          rm -rf ${{ github.workspace }}/target/apt-repo/db
+          rm -rf ${{ github.workspace }}/target/apt-repo/conf
       - run: echo "Repository structure built!"
       - name: Commit results
         run: |
