@@ -35,3 +35,11 @@ jobs:
       - run: rm -rf ${{ github.workspace }}/target/apt-repo/conf
       - run: ls ${{ github.workspace }}/target/apt-repo
       - run: echo "Repository structure built!"
+      - name: Commit results
+        run: |
+          git config --global user.name 'Alexander Bolotov'
+          git config --global user.email 'bolotov@degirum.com'
+          git commit -am "Automated diver source package commit"
+          git push
+        working-directory: ${{ github.workspace }}/target
+      - run: echo "Upload completed!"
