@@ -20,14 +20,18 @@ jobs:
       - run: debuild -S
         working-directory: ${{ github.workspace }}/workspace
       - run: echo "DSC package built!"
-      - name: List files in the repository
-        run: ls ${{ github.workspace }}
-      - name: List result files
-        run: ls ${{ github.home }}
-      - name: List result files 2
-        run: ls ${{ github.workspace }}/workspace
       - run: sudo apt install reprepro
-      - run: reprepro --basedir ${{ github.workspace }}/repository includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
-        working-directory: ${{ github.workspace }}/repository
-      - name: List result files 3
-        run: ls ${{ github.workspace }}/repository
+      - name: Check out target repository code
+        uses: actions/checkout@v2
+        with:
+          path: target
+          repository: DeGirum/DeGirum.github.io
+      - run: rm -rf ${{ github.workspace }}/target/apt-repo
+      - run: mv ${{ github.workspace }}/repository ${{ github.workspace }}/target/apt-repo
+      - run: reprepro --basedir ${{ github.workspace }}/target/apt-repo includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
+        working-directory: ${{ github.workspace }}/target/apt-repo
+      - run: ls ${{ github.workspace }}/target/apt-repo
+      - run: rm -rf ${{ github.workspace }}/target/apt-repo/db
+      - run: rm -rf ${{ github.workspace }}/target/apt-repo/conf
+      - run: ls ${{ github.workspace }}/target/apt-repo
+      - run: echo "Repository structure built!"
