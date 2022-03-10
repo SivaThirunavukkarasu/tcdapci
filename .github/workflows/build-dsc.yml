@@ -26,6 +26,7 @@ jobs:
         with:
           path: target
           repository: DeGirum/DeGirum.github.io
+          token: ${{ secrets.PRIVATE_TOKEN }}
       - run: rm -rf ${{ github.workspace }}/target/apt-repo
       - run: mv ${{ github.workspace }}/repository ${{ github.workspace }}/target/apt-repo
       - run: reprepro --basedir ${{ github.workspace }}/target/apt-repo includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
