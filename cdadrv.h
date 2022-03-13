@@ -15,6 +15,7 @@
 #define CDA_MAX_DRV_SEMAPHORES (16)
 
 struct cda_interrupts;
+struct cda_bar;
 struct cda_dev {
     struct cdev cdev;
     struct device dev;
@@ -34,6 +35,11 @@ struct cda_dev {
 	struct list_head mem_blocks;
 	struct list_head mem_maps;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+	// Security kernel lock needs w/a to access BARs
+	struct kobject *kobj_bars;
+	struct cda_bar *sysfs_bar[PCI_ROM_RESOURCE]; // 6 BARs excl. ROM
+#endif
 	u64 semaphores[CDA_MAX_DRV_SEMAPHORES];
 	void *sem_owner[CDA_MAX_DRV_SEMAPHORES];
 };
@@ -50,8 +56,8 @@ int cda_free_irqs(struct cda_dev *dev, void *owner);
 void cda_mems_release(struct cda_dev *dev);
 int cda_req_int(struct cda_dev *dev, void *owner, void __user *ureq);
 int cda_cancel_req(struct cda_dev *dev, void *owner);
-int cda_check_bars(struct cda_dev *cdadev);
-void cda_restore_bars(struct cda_dev *cdadev);
+int cda_open_bars(struct cda_dev *cdadev);
+void cda_release_bars(struct cda_dev *cdadev);
 int cda_sem_aq(struct cda_dev *cdadev, void *owner, void __user *ureq);
 int cda_sem_rel(struct cda_dev *cdadev, void *owner, void __user *ureq);
 void cda_sem_rel_by_owner(struct cda_dev *dev, void *owner);

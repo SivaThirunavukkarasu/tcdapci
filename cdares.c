@@ -7,6 +7,9 @@
 // under the terms and conditions of the GNU General Public License,
 // version 2, as published by the Free Software Foundation.
 //
+#include <linux/kernel.h>
+#include <linux/mm.h>
+#include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/sched.h>
 #include <linux/delay.h>
@@ -29,6 +32,19 @@ struct cda_interrupts {
 	struct cda_vector *vecs;
 	struct msix_entry *msix_entries;
 };
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+struct cda_bar {
+	struct kobject kobj;
+	/* struct resource *res; */
+	int index;
+	phys_addr_t paddr;
+	phys_addr_t len;
+	void *vaddr;
+	struct cda_dev *dev;
+	struct bin_attribute mmap_attr;
+};
+#endif
 
 static int cda_alloc_msix(struct cda_dev *cdadev, uint32_t rvecs, struct cda_interrupts *ints)
 {
@@ -264,39 +280,6 @@ int cda_cancel_req(struct cda_dev *cdadev, void *owner)
 	return 0;
 }
 
-int cda_check_bars(struct cda_dev *cdadev)
-{
-	int i;
-	struct resource *res_child;
-	int bars = pci_select_bars(cdadev->pcidev, IORESOURCE_MEM);
-
-	for( i = 0; i < PCI_ROM_RESOURCE; i++ ) {
-		// Drop busy bit
-		if( bars & (1 << i) ) {
-			res_child = cdadev->pcidev->resource[i].child;
-			cdadev->stored_flags[i] = res_child->flags;
-			printk("Store resource %d flag: 0x%lx\n", i, res_child->flags);
-			if( IORESOURCE_BUSY & res_child->flags ) {
-				res_child->flags &= ~IORESOURCE_BUSY;
-				//printk("Drop busy bit for resource %d", i);
-			}
-		}
-	}
-	return 0;
-}
-
-void cda_restore_bars(struct cda_dev *cdadev)
-{
-	int i;
-	int bars = pci_select_bars(cdadev->pcidev, IORESOURCE_MEM);
-	for( i = 0; i < PCI_ROM_RESOURCE; i++ ) {
-		if( bars & (1 << i) ) {
-			cdadev->pcidev->resource[i].child->flags = cdadev->stored_flags[i];
-			printk("Restore resource %d flag: %lx\n", i, cdadev->stored_flags[i]);
-		}
-	}
-}
-
 int cda_sem_aq(struct cda_dev *cdadev, void *owner, void __user *ureq)
 {
 	int res = 0;
@@ -346,3 +329,221 @@ void cda_sem_rel_by_owner(struct cda_dev *dev, void *owner)
 	}
 	mutex_unlock(&dev->ilock);
 }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+#define to_bar(obj) container_of((obj), struct cda_bar, kobj)
+struct bar_sysfs_entry {
+	struct attribute attr;
+	ssize_t (*show)(struct cda_bar *, char *);
+	ssize_t (*store)(struct cda_bar *, char*, size_t);
+};
+
+#define cdadev_bar_attr(_field, _fmt)					\
+	static ssize_t							\
+	bar_##_field##_show(struct cda_bar *bar, char *buf)		\
+	{								\
+		return sprintf(buf, _fmt, bar->_field);			\
+	}								\
+	static struct bar_sysfs_entry bar_##_field##_attr =		\
+		__ATTR(_field, S_IRUGO, bar_##_field##_show, NULL);
+
+#pragma GCC diagnostic ignored "-Wformat"
+cdadev_bar_attr(paddr, "0x%lx\n");
+cdadev_bar_attr(len, "0x%lx\n");
+cdadev_bar_attr(index, "%d\n");
+#pragma GCC diagnostic warning "-Wformat"
+
+static ssize_t bar_attr_show(struct kobject *kobj, struct attribute *attr,
+			     char *buf)
+{
+	struct cda_bar *bar = to_bar(kobj);
+	struct bar_sysfs_entry *entry =
+		container_of(attr, struct bar_sysfs_entry, attr);
+
+	if (!entry->show)
+		return -EIO;
+
+	return entry->show(bar, buf);
+}
+
+static const struct sysfs_ops bar_ops = {
+	.show = bar_attr_show,
+};
+
+static void bar_release(struct kobject *kobj)
+{
+	struct cda_bar *bar = to_bar(kobj);
+	kfree(bar);
+}
+
+static struct attribute *bar_attrs[] = {
+	&bar_paddr_attr.attr,
+	&bar_len_attr.attr,
+	&bar_index_attr.attr,
+	NULL,
+};
+
+static struct kobj_type bar_type = {
+	.sysfs_ops = &bar_ops,
+	.release = bar_release,
+	.default_attrs = bar_attrs,
+};
+
+// Secure enable support
+static const struct vm_operations_struct pci_phys_vm_ops = {
+#ifdef CONFIG_HAVE_IOREMAP_PROT
+	.access = generic_access_phys,
+#endif
+};
+
+static int bar_mmap( struct file *file, 
+						struct kobject *kobj, 
+						struct bin_attribute *attr,
+		       			struct vm_area_struct *vma)
+{
+	struct cda_bar *bar = attr->private;
+	unsigned long requested = (vma->vm_end - vma->vm_start) >> PAGE_SHIFT;
+	unsigned long pages = (unsigned long)bar->len >> PAGE_SHIFT;
+	unsigned long size;
+
+	if (vma->vm_pgoff + requested > pages)
+		return -EINVAL;
+
+	size = ((pci_resource_len(bar->dev->pcidev, bar->index) - 1) >> PAGE_SHIFT) + 1;
+	if (vma->vm_pgoff + vma_pages(vma) > size)
+		return -EINVAL;
+
+	vma->vm_page_prot = pgprot_device(vma->vm_page_prot);
+	vma->vm_pgoff += (pci_resource_start(bar->dev->pcidev, bar->index) >> PAGE_SHIFT);
+	vma->vm_ops = &pci_phys_vm_ops;
+
+	return io_remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff,
+									vma->vm_end - vma->vm_start,
+									vma->vm_page_prot);
+}
+
+int cda_open_bars(struct cda_dev *cdadev)
+{
+	int i;
+	int ret;
+	struct cda_bar *bar;
+	struct resource *res_child;
+	int bars = pci_select_bars(cdadev->pcidev, IORESOURCE_MEM);
+
+	ret = -EINVAL;
+	cdadev->kobj_bars = kobject_create_and_add("bars", &cdadev->dev.kobj);
+	if (!cdadev->kobj_bars)
+		goto err;
+
+	for (i = 0; bars && i < PCI_ROM_RESOURCE; bars >>= 1, i++){
+		struct bin_attribute *mmap_attr;
+		if (!(bars & 1))
+			continue;
+
+		if( !(pci_resource_flags(cdadev->pcidev, i) & IORESOURCE_MEM) )
+			continue;
+		
+		ret = -ENOMEM;
+		bar = kzalloc(sizeof(*bar), GFP_KERNEL);
+		if (!bar)
+			goto err;
+		bar->index = i;
+		bar->paddr = pci_resource_start(cdadev->pcidev, i);
+		bar->len = pci_resource_len(cdadev->pcidev, i);
+		bar->vaddr = NULL;
+		bar->dev = cdadev;
+		cdadev->sysfs_bar[i] = bar;
+		kobject_init(&bar->kobj, &bar_type);
+
+		if( (bar->vaddr = pci_iomap(cdadev->pcidev, i, bar->len)) == NULL )
+			goto err;
+		ret = kobject_add(&bar->kobj, cdadev->kobj_bars, "mmio_bar%d", i);
+		if (ret)
+			goto err;
+
+		mmap_attr = &bar->mmap_attr;
+		mmap_attr->mmap = bar_mmap;
+		mmap_attr->attr.name = "mmap";
+		mmap_attr->attr.mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP; // | S_IROTH | S_IWOTH;
+		mmap_attr->size = bar->len;
+		mmap_attr->private = bar;
+
+		ret = sysfs_create_bin_file(&bar->kobj, mmap_attr);
+		if (ret) {
+			dev_err(&cdadev->dev, "Can't create kobject file for mmap");
+			goto err;
+		}
+
+		//Drop busy bit
+		res_child = cdadev->pcidev->resource[i].child;
+
+		printk("Store resource %d flag: 0x%lx\n", i, res_child->flags);
+		cdadev->stored_flags[i] = res_child->flags;
+		if (IORESOURCE_BUSY & res_child->flags) {
+			res_child->flags &= ~IORESOURCE_BUSY;
+		}
+	}
+	return 0;
+
+err:
+	cda_release_bars(cdadev);
+	return ret;
+}
+
+void cda_release_bars(struct cda_dev *cdadev)
+{
+	int i;
+	int bars = pci_select_bars(cdadev->pcidev, IORESOURCE_MEM);
+	for( i = 0; i < PCI_ROM_RESOURCE; i++ ) {
+		struct cda_bar *bar = cdadev->sysfs_bar[i];
+		if (!bar)
+			continue;
+
+		cdadev->sysfs_bar[i] = NULL;
+		sysfs_remove_bin_file(&bar->kobj, &bar->mmap_attr);
+		kobject_del(&bar->kobj);
+		kobject_put(&bar->kobj);
+
+		if( bars & (1 << i) ) {
+			cdadev->pcidev->resource[i].child->flags = cdadev->stored_flags[i];
+			printk("Restore resource %d flag: %lx\n", i, cdadev->stored_flags[i]);
+		}
+	}
+
+	kobject_del(cdadev->kobj_bars);
+	kobject_put(cdadev->kobj_bars);
+}
+#else // LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)
+int cda_open_bars(struct cda_dev *cdadev)
+{
+	int i;
+	struct resource *res_child;
+	int bars = pci_select_bars(cdadev->pcidev, IORESOURCE_MEM);
+
+	for( i = 0; i < PCI_ROM_RESOURCE; i++ ) {
+		// Drop busy bit
+		if( bars & (1 << i) ) {
+			res_child = cdadev->pcidev->resource[i].child;
+			cdadev->stored_flags[i] = res_child->flags;
+			printk("Store resource %d flag: 0x%lx\n", i, res_child->flags);
+			if( IORESOURCE_BUSY & res_child->flags ) {
+				res_child->flags &= ~IORESOURCE_BUSY;
+				//printk("Drop busy bit for resource %d", i);
+			}
+		}
+	}
+	return 0;
+}
+
+void cda_release_bars(struct cda_dev *cdadev)
+{
+	int i;
+	int bars = pci_select_bars(cdadev->pcidev, IORESOURCE_MEM);
+	for( i = 0; i < PCI_ROM_RESOURCE; i++ ) {
+		if( bars & (1 << i) ) {
+			cdadev->pcidev->resource[i].child->flags = cdadev->stored_flags[i];
+			printk("Restore resource %d flag: %lx\n", i, cdadev->stored_flags[i]);
+		}
+	}
+}
+#endif

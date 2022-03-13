@@ -15,9 +15,9 @@
 #include "cdaioctl.h"
 
 MODULE_AUTHOR("DeGirum Corp., Egor Pomozov");
-MODULE_DESCRIPTION("DCA linux driver to access pci devices");
+MODULE_DESCRIPTION("CDA linux driver to access pci devices");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.1");
+MODULE_VERSION("0.2");
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,9,0)
 #error Too old kernel
@@ -76,7 +76,22 @@ static struct class cda_class = {
 	.name = cda_name,
 	.dev_release = cdadev_release,
 };
-
+/*
+static inline bool cda_kernel_is_locked_down(void)
+{
+#ifdef CONFIG_LOCK_DOWN_KERNEL
+#ifdef CONFIG_LOCK_DOWN_IN_EFI_SECURE_BOOT / * fedora * /
+	return kernel_is_locked_down(NULL);
+#elif CONFIG_EFI_SECURE_BOOT_LOCK_DOWN / * ubuntu * /
+	return kernel_is_locked_down();
+#else
+	return false;
+#endif
+#else
+	return false;
+#endif
+}
+*/
 static void cdadev_free(struct cda_dev *cdadev)
 {
 	ida_simple_remove(&cdaminor_ida, cdadev->minor);
@@ -190,13 +205,13 @@ static int cda_pci_probe(struct pci_dev *pcidev,
 	if( ret ) 
 		goto err_pci_init;
 
-	ret = cda_check_bars(cdadev);
-	if( ret )
-		goto err_check_bar;
-
 	ret = cda_mems_create(cdadev);
 	if( ret )
 		goto err_sysfsmem;
+
+	ret = cda_open_bars(cdadev);
+	if( ret )
+		goto err_check_bar;
 
 	ret = cda_cdev_init(cdadev);
 	if( ret )
@@ -209,10 +224,10 @@ static int cda_pci_probe(struct pci_dev *pcidev,
 	pci_set_drvdata(pcidev, cdadev);
 	return 0;
 err_cdev_init:
+	cda_release_bars(cdadev);
+err_check_bar:
 	cda_mems_release(cdadev);
 err_sysfsmem:
-	cda_restore_bars(cdadev);
-err_check_bar:
 	pci_release_regions(pcidev);
 	pci_disable_device(pcidev);
 err_pci_init:
@@ -233,9 +248,9 @@ static void cda_pci_remove(struct pci_dev *pcidev)
 	spin_unlock(&cdadevlist_sl);
 
 	cdev_del(&cdadev->cdev);
-	cda_mems_release(cdadev);
+	cda_release_bars(cdadev);
 
-	cda_restore_bars(cdadev);
+	cda_mems_release(cdadev);
 
 	cda_free_irqs(cdadev, NULL);
     cda_unmmap_dev_mem(cdadev, NULL);
