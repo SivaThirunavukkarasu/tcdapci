@@ -1,0 +1,15 @@
+Source: orca-driver
+Section: utils
+Priority: optional
+Maintainer: Alexander Bolotov <bolotov@degirum.com>
+Build-Depends: debhelper (>= 10)
+Standards-Version: 4.1.2
+Homepage: https://degirum.com
+Vcs-Git: https://github.com/DeGirum/lincdadrv.git
+Vcs-Browser: https://github.com/DeGirum/lincdadrv
+
+Package: orca-driver
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: ORCA kernel driver
+ Kernel mode driver for ORCA AI accelerator.

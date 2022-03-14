@@ -1,0 +1,50 @@
+name: Debian Source Package and Repository build
+on: [push]
+jobs:
+  Build-DSC-Repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install prerequisites
+        run: sudo apt install gnupg dput dh-make devscripts lintian dpkg-dev reprepro
+      - name: Check out repository code
+        uses: actions/checkout@v2
+        with:
+          path: workspace
+      - name: Relocate repository building configuration
+        run: mv ${{ github.workspace }}/workspace/repository-setup ${{ github.workspace }}/repository
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v4
+        with:
+          gpg_private_key: ${{ secrets.DRIVER_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
+      - name: Build package
+        run: debuild -S
+        working-directory: ${{ github.workspace }}/workspace
+      - run: echo "DSC package built!"
+      - name: Check out target repository code
+        uses: actions/checkout@v2
+        with:
+          path: target
+          repository: DeGirum/DeGirum.github.io
+          token: ${{ secrets.PRIVATE_TOKEN }}
+      - name: Prepare repository build
+        run: |
+          rm -rf ${{ github.workspace }}/target/apt-repo
+          mv ${{ github.workspace }}/repository ${{ github.workspace }}/target/apt-repo
+      - name: Build repository
+        run: reprepro --basedir ${{ github.workspace }}/target/apt-repo includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
+        working-directory: ${{ github.workspace }}/target/apt-repo
+      - name: Clean up repository build files
+        run: |
+          rm -rf ${{ github.workspace }}/target/apt-repo/db
+          rm -rf ${{ github.workspace }}/target/apt-repo/conf
+      - run: echo "Repository structure built!"
+      - name: Commit results
+        run: |
+          git config --global user.name 'Alexander Bolotov'
+          git config --global user.email 'bolotov@degirum.com'
+          git commit -am "Automated diver source package commit"
+          git push
+        working-directory: ${{ github.workspace }}/target
+      - run: echo "Upload completed!"

@@ -37,7 +37,7 @@ clean:
 	$(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) clean
 sign: export KBUILD_SIGN_PIN = degirum
 sign:
-        sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$(shell uname -r)/scripts/sign-file sha512 /var/lib/shim-signed/mok/MOK.priv /var/lib/shim-signed/mok/MOK.der cdapci.ko
+	sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$(shell uname -r)/scripts/sign-file sha512 /var/lib/shim-signed/mok/MOK.priv /var/lib/shim-signed/mok/MOK.der cdapci.ko
 mokprep:
 	sudo mokutil --import /var/lib/shim-signed/mok/MOK.der
 install:
