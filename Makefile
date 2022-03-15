@@ -25,7 +25,10 @@ UDEV_RULE0='SUBSYSTEM=="cda", MODE="0660", GROUP="$(DG_GROUP)"'
 UDEV_RULE1='SUBSYSTEM=="cda", ACTION=="add", RUN+="/usr/local/bin/force_usr_mode.sh"'
 #
 FORCE_USR_MODE0="\#!/bin/sh"
-FORCE_USR_MODE1='for d in $$(dirname -- $$(find /sys/devices/* -name "vendor" -exec grep -H $(DG_VID) {} \;)); do /bin/chmod ug+rw $$d/resource* ; /bin/chown root:$(DG_GROUP) $$d/resource* ; done'
+FORCE_USR_MODE1='for d in $$(dirname -- $$(find /sys/devices/* -name "vendor" -exec grep -H $(DG_VID) {} \;));'
+FORCE_USR_MODE2='do /bin/chmod ug+rw $$d/resource* ; /bin/chown root:$(DG_GROUP) $$d/resource* ;'
+FORCE_USR_MODE3='for dd in $$(dirname -- $$(find $$d/cda/* -name "mmap")); do /bin/chmod ug+rw $$dd/mmap ; /bin/chown root:$(DG_GROUP) $$dd/mmap ; done'
+FORCE_USR_MODE4='done'
 ifneq ($(KERNELRELEASE),)
 	obj-m := $(TARGET_MODULE).o
 	$(TARGET_MODULE)-objs := cdadrv.o cdamem.o cdares.o
@@ -60,6 +63,9 @@ endif
 endif
 	@echo $(FORCE_USR_MODE0) | sudo -E tee -i /usr/local/bin/force_usr_mode.sh > /dev/null
 	@echo $(FORCE_USR_MODE1) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
+	@echo $(FORCE_USR_MODE2) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
+	@echo $(FORCE_USR_MODE3) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
+	@echo $(FORCE_USR_MODE4) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
 	@sudo -E chmod +x /usr/local/bin/force_usr_mode.sh > /dev/null
 	@echo $(UDEV_RULE0) | sudo -E tee -i /etc/udev/rules.d/66-cdapci.rules > /dev/null
 	@echo $(UDEV_RULE1) | sudo -E tee -a /etc/udev/rules.d/66-cdapci.rules > /dev/null
