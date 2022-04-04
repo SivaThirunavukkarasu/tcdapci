@@ -52,9 +52,10 @@ static int cda_cdev_release(struct inode *ino, struct file *file);
 static long cda_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 
 static struct pci_device_id cda_pci_ids[] = {
-	{ PCI_DEVICE(0x1f0d, 0x100) },
+	{ PCI_DEVICE(0x1f0d, 0x0100) },
 	{ PCI_DEVICE(0x1f0d, 0x8101) },
-	{ PCI_DEVICE(0x1f0d, 0x101) },
+	{ PCI_DEVICE(0x1f0d, 0x0101) },
+	{ PCI_DEVICE(0x10ee, 0x8011) },
 	{ PCI_DEVICE(0, 0) }, 
 	{ PCI_DEVICE(0, 0) },
 };

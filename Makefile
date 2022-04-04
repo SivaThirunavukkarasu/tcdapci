@@ -18,17 +18,22 @@ IS_SYSTEMD_USED=$(shell pidof systemd && echo "systemd" || echo "other")
 IS_THERE_CDA_GROUP=$(shell getent group dg_orca && echo "yes" || echo "no")
 IS_USER_IN_CDA_GROUP=$(shell groups | grep dg_orca && echo "yes" || echo "no")
 
-DG_VID="1f0d"
+DG_VID=1f0d
+XL_VID=10ee
 DG_GROUP=dg_orca
+VIDS="$(DG_VID) $(XL_VID)"
 
 UDEV_RULE0='SUBSYSTEM=="cda", MODE="0660", GROUP="$(DG_GROUP)"'
 UDEV_RULE1='SUBSYSTEM=="cda", ACTION=="add", RUN+="/usr/local/bin/force_usr_mode.sh"'
 #
 FORCE_USR_MODE0="\#!/bin/sh"
-FORCE_USR_MODE1='for d in $$(dirname -- $$(find /sys/devices/* -name "vendor" -exec grep -H $(DG_VID) {} \;));'
-FORCE_USR_MODE2='do /bin/chmod ug+rw $$d/resource* ; /bin/chown root:$(DG_GROUP) $$d/resource* ;'
-FORCE_USR_MODE3='for dd in $$(dirname -- $$(find $$d/cda/* -name "mmap")); do /bin/chmod ug+rw $$dd/mmap ; /bin/chown root:$(DG_GROUP) $$dd/mmap ; done'
-FORCE_USR_MODE4='done'
+FORCE_USR_MODE1='VIDS=$VIDS;'
+FORCE_USR_MODE1='for vid in $$VIDS;'
+FORCE_USR_MODE2='do for d in $$(dirname -- $$(find /sys/devices/* -name "vendor" -exec grep -H "$$vid" {} \;));'
+FORCE_USR_MODE3='do /bin/chmod ug+rw $$d/resource* ; /bin/chown root:$(DG_GROUP) $$d/resource* ;'
+FORCE_USR_MODE4='for dd in $$(dirname -- $$(find $$d/cda/* -name "mmap")); do /bin/chmod ug+rw $$dd/mmap ; /bin/chown root:$(DG_GROUP) $$dd/mmap ; done'
+FORCE_USR_MODE5='done'
+FORCE_USR_MODE6='done'
 ifneq ($(KERNELRELEASE),)
 	obj-m := $(TARGET_MODULE).o
 	$(TARGET_MODULE)-objs := cdadrv.o cdamem.o cdares.o
@@ -66,6 +71,8 @@ endif
 	@echo $(FORCE_USR_MODE2) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
 	@echo $(FORCE_USR_MODE3) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
 	@echo $(FORCE_USR_MODE4) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
+	@echo $(FORCE_USR_MODE5) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
+	@echo $(FORCE_USR_MODE6) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
 	@sudo -E chmod +x /usr/local/bin/force_usr_mode.sh > /dev/null
 	@echo $(UDEV_RULE0) | sudo -E tee -i /etc/udev/rules.d/66-cdapci.rules > /dev/null
 	@echo $(UDEV_RULE1) | sudo -E tee -a /etc/udev/rules.d/66-cdapci.rules > /dev/null
