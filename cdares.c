@@ -464,7 +464,7 @@ int cda_open_bars(struct cda_dev *cdadev)
 		mmap_attr = &bar->mmap_attr;
 		mmap_attr->mmap = bar_mmap;
 		mmap_attr->attr.name = "mmap";
-		mmap_attr->attr.mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP; // | S_IROTH | S_IWOTH;
+		mmap_attr->attr.mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 		mmap_attr->size = bar->len;
 		mmap_attr->private = bar;
 
