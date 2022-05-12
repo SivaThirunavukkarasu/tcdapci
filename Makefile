@@ -9,80 +9,28 @@
 #
 TARGET_MODULE := cdapci
 
-BUILDDIR ?= /lib/modules/$(shell uname -r)/build
+KERNELDIR ?= /lib/modules/$(shell uname -r)/build
 
 THIS_MKFILE := $(lastword $(MAKEFILE_LIST))
 THIS_MKFILE_DIR := $(dir $(abspath $(THIS_MKFILE)))
 
-IS_SYSTEMD_USED=$(shell pidof systemd && echo "systemd" || echo "other")
-IS_THERE_CDA_GROUP=$(shell getent group dg_orca && echo "yes" || echo "no")
-IS_USER_IN_CDA_GROUP=$(shell groups | grep dg_orca && echo "yes" || echo "no")
-
-DG_VID=1f0d
-XL_VID=10ee
-DG_GROUP=dg_orca
-VIDS="$(DG_VID) $(XL_VID)"
-
-UDEV_RULE0='SUBSYSTEM=="cda", MODE="0660", GROUP="$(DG_GROUP)"'
-UDEV_RULE1='SUBSYSTEM=="cda", ACTION=="add", RUN+="/usr/local/bin/force_usr_mode.sh"'
-#
-FORCE_USR_MODE0="\#!/bin/sh"
-FORCE_USR_MODE1='VIDS=$VIDS;'
-FORCE_USR_MODE1='for vid in $$VIDS;'
-FORCE_USR_MODE2='do for d in $$(dirname -- $$(find /sys/devices/* -name "vendor" -exec grep -H "$$vid" {} \;));'
-FORCE_USR_MODE3='do /bin/chmod ug+rw $$d/resource* ; /bin/chown root:$(DG_GROUP) $$d/resource* ;'
-FORCE_USR_MODE4='for dd in $$(dirname -- $$(find $$d/cda/* -name "mmap")); do /bin/chmod ug+rw $$dd/mmap ; /bin/chown root:$(DG_GROUP) $$dd/mmap ; done'
-FORCE_USR_MODE5='done'
-FORCE_USR_MODE6='done'
 ifneq ($(KERNELRELEASE),)
 	obj-m := $(TARGET_MODULE).o
 	$(TARGET_MODULE)-objs := cdadrv.o cdamem.o cdares.o
 endif
 .PHONY: all
 all:
-	$(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) modules
+	$(MAKE) -C $(KERNELDIR) scripts
+	$(MAKE) -C $(KERNELDIR) modules_prepare
+	$(MAKE) -C $(KERNELDIR) M=$(THIS_MKFILE_DIR) modules
 clean:
-	$(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) clean
-sign: export KBUILD_SIGN_PIN = degirum
-sign:
-	sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$(shell uname -r)/scripts/sign-file sha512 /var/lib/shim-signed/mok/MOK.priv /var/lib/shim-signed/mok/MOK.der cdapci.ko
-mokprep:
-	sudo mokutil --import /var/lib/shim-signed/mok/MOK.der
+	$(MAKE) -C $(KERNELDIR) M=$(THIS_MKFILE_DIR) clean
 install:
-	sudo -E $(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) modules_install
+	sudo -E $(MAKE) -C $(KERNELDIR) M=$(THIS_MKFILE_DIR) modules_install
 	@sudo -E depmod
-ifneq ($(IS_SYSTEMD_USED),other)
 	@echo $(TARGET_MODULE) | sudo -E tee -i /etc/modules-load.d/cdapci.conf > /dev/null
-else
-	$(warning "No module autostart on reboot")
-endif
-ifeq ($(IS_THERE_CDA_GROUP),no)
-	$(warning "No group cda. Create it. And add current user")
-	@sudo -E groupadd $(DG_GROUP)
-	@sudo -E usermod -a -G $(DG_GROUP) $$(whoami)
-else
-ifeq ($(IS_USER_IN_CDA_GROUP),no)
-	$(warning "Group cda exists. Add current user")
-	@sudo -E usermod -a -G $(DG_GROUP) $$(whoami)
-endif
-endif
-	@echo $(FORCE_USR_MODE0) | sudo -E tee -i /usr/local/bin/force_usr_mode.sh > /dev/null
-	@echo $(FORCE_USR_MODE1) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
-	@echo $(FORCE_USR_MODE2) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
-	@echo $(FORCE_USR_MODE3) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
-	@echo $(FORCE_USR_MODE4) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
-	@echo $(FORCE_USR_MODE5) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
-	@echo $(FORCE_USR_MODE6) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
-	@sudo -E chmod +x /usr/local/bin/force_usr_mode.sh > /dev/null
-	@echo $(UDEV_RULE0) | sudo -E tee -i /etc/udev/rules.d/66-cdapci.rules > /dev/null
-	@echo $(UDEV_RULE1) | sudo -E tee -a /etc/udev/rules.d/66-cdapci.rules > /dev/null
-	@sudo -E udevadm control --reload-rules
 uninstall:
-ifneq ($(IS_SYSTEMD_USED),other)
 	@sudo -E rm -f /etc/modules-load.d/cdapci.conf
-endif
 	-sudo -E modprobe -r $(TARGET_MODULE)
-	@sudo -E rm -f /usr/local/bin/force_usr_mode.sh
-	@sudo -E rm -f /etc/udev/rules.d/66-cdapci.rules
 	@sudo -E rm -f $(shell modinfo -n $(TARGET_MODULE))
 	@sudo -E depmod
