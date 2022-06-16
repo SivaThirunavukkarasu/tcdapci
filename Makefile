@@ -43,7 +43,13 @@ sign:
 	sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$(shell uname -r)/scripts/sign-file sha512 /var/lib/shim-signed/mok/MOK.priv /var/lib/shim-signed/mok/MOK.der cdapci.ko
 mokprep:
 	sudo mokutil --import /var/lib/shim-signed/mok/MOK.der
-preinstall:
+postinstall:
+	@sudo -E depmod
+ifneq ($(IS_SYSTEMD_USED),other)
+	@echo $(TARGET_MODULE) | sudo -E tee -i /etc/modules-load.d/cdapci.conf > /dev/null
+else
+	$(warning "No module autostart on reboot")
+endif
 ifeq ($(IS_THERE_CDA_GROUP),no)
 	$(warning "No group cda. Create it. And add current user")
 	@sudo -E groupadd $(DG_GROUP)
@@ -64,30 +70,29 @@ endif
 	@echo $(UDEV_RULE1) | sudo -E tee -a /etc/udev/rules.d/66-cdapci.rules > /dev/null
 	@sudo -E udevadm control --reload-rules
 
-install: preinstall
+install:
 	sudo -E $(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) modules_install
-	@sudo -E depmod
-ifneq ($(IS_SYSTEMD_USED),other)
-	@echo $(TARGET_MODULE) | sudo -E tee -i /etc/modules-load.d/cdapci.conf > /dev/null
-else
-	$(warning "No module autostart on reboot")
-endif
+	$(MAKE) -f $(THIS_MKFILE) postinstall
 
-uninstall:
+preuninstall:
 ifneq ($(IS_SYSTEMD_USED),other)
 	@sudo -E rm -f /etc/modules-load.d/cdapci.conf
 endif
 	-sudo -E modprobe -r $(TARGET_MODULE)
 	@sudo -E rm -f /usr/local/bin/force_usr_mode.sh
 	@sudo -E rm -f /etc/udev/rules.d/66-cdapci.rules
+
+uninstall: preuninstall
 	@sudo -E rm -f $(shell modinfo -n $(TARGET_MODULE))
 	@sudo -E depmod
-dkms: preinstall clean
+
+dkms: clean
 	@sudo -E sed -i "s/^PACKAGE_VERSION=\"[0-9]\.[0-9]\"/PACKAGE_VERSION=\"$(TARGET_VERSION)\"/g" dkms.conf
 	@sudo -E mkdir -p /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
 	@sudo -E cp -Rf * /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)/
 	@sudo -E dkms add -m $(TARGET_MODULE) -v $(TARGET_VERSION)
 	@sudo -E dkms install $(TARGET_MODULE) -v $(TARGET_VERSION)
+
 dkms-clean:
 	@sudo -E dkms remove -m $(TARGET_MODULE)/$(TARGET_VERSION) --all
 	@sudo -E rm -rf /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
