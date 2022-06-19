@@ -18,6 +18,14 @@ IS_SYSTEMD_USED=$(shell pidof systemd && echo "systemd" || echo "other")
 IS_THERE_CDA_GROUP=$(shell getent group dg_orca && echo "yes" || echo "no")
 IS_USER_IN_CDA_GROUP=$(shell groups | grep dg_orca && echo "yes" || echo "no")
 
+IS_SB_EN ?= ?= $(shell sudo mokutil --sb-state | grep -ci "enabled")
+KEY_DER_PATH ?= /var/lib/shim-signed/mok/MOK.der
+KEY_BASENAME := $(basename $(KEY_DER_PATH))
+KEY_PRIV_PATH ?= $(KEY_BASENAME).priv
+IS_KEY_PRESENT=$(shell test -f $(KEY_DER_PATH) && echo "yes" || echo "no")
+IS_PKEY_PRESENT=$(shell test -f $(KEY_PRIV_PATH) && echo "yes" || echo "no")
+KEY_IN_MOK=$(shell sudo mokutil --test-key $(KEY_DER_PATH) | grep -ci "is valid")
+KDER_SIGN_PIN?=degirum
 DG_VID="1f0d"
 DG_GROUP=dg_orca
 
@@ -38,11 +46,28 @@ all:
 	$(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) modules
 clean:
 	$(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) clean
-sign: export KBUILD_SIGN_PIN = degirum
+sign: export KBUILD_SIGN_PIN=$(KDER_SIGN_PIN)
 sign:
-	sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$(shell uname -r)/scripts/sign-file sha512 /var/lib/shim-signed/mok/MOK.priv /var/lib/shim-signed/mok/MOK.der cdapci.ko
-mokprep:
-	sudo mokutil --import /var/lib/shim-signed/mok/MOK.der
+	sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$(shell uname -r)/scripts/sign-file sha512 $(KEY_PRIV_PATH) $(KEY_DER_PATH) cdapci.ko
+preinstall:
+ifeq ($(IS_SB_EN),1)
+ifeq ($(IS_KEY_PRESENT),no)
+	$(warning "No MOK key. Create it")
+	sudo openssl req -new -x509 -newkey rsa:2048 -keyout $(KEY_PRIV_PATH) -outform DER -out $(KEY_DER_PATH) -days 36500 -subj "/CN=cdapci module signing key/" -passout pass:$(KDER_SIGN_PIN)
+else
+	$(info "MOK key presented")
+endif
+ifeq ($(KEY_IN_MOK),0)
+	$(warning "Key should be installed in MOK. Please reboot the system to complete it.")
+	@sudo mokutil --import $KEY_DER_PATH
+else
+	$(info "Key is installed in MOK")
+endif
+	$(MAKE) sign KEY_DER_PATH=$(KEY_DER_PATH) KEY_PRIV_PATH=$(KEY_PRIV_PATH)
+else
+	$(info "Security Boot is not enabled. Driver signing is not required.")
+endif
+
 postinstall:
 	@sudo -E depmod
 ifneq ($(IS_SYSTEMD_USED),other)
@@ -70,7 +95,7 @@ endif
 	@echo $(UDEV_RULE1) | sudo -E tee -a /etc/udev/rules.d/66-cdapci.rules > /dev/null
 	@sudo -E udevadm control --reload-rules
 
-install:
+install: preinstall
 	sudo -E $(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) modules_install
 	$(MAKE) -f $(THIS_MKFILE) postinstall
 
