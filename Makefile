@@ -31,7 +31,7 @@ KEY_BASENAME := $(basename $(KEY_DER_PATH))
 KEY_PRIV_PATH ?= $(KEY_BASENAME).priv
 IS_KEY_PRESENT=$(shell test -f $(KEY_DER_PATH) && echo "yes" || echo "no")
 IS_PKEY_PRESENT=$(shell test -f $(KEY_PRIV_PATH) && echo "yes" || echo "no")
-KEY_IN_MOK=$(shell sudo mokutil --test-key $(KEY_DER_PATH) | grep -ci "is valid")
+KEY_IN_MOK=$(shell sudo mokutil --test-key $(KEY_DER_PATH) | grep -ci "is enrolled")
 KDER_SIGN_PIN?=degirum
 DG_VID="1f0d"
 DG_GROUP=dg_orca
@@ -74,7 +74,7 @@ else
 endif
 ifeq ($(KEY_IN_MOK),0)
 	$(warning "Key should be installed in MOK. Please reboot the system to complete it.")
-	@sudo mokutil --import $KEY_DER_PATH
+	@sudo mokutil --import $(KEY_DER_PATH)
 else
 	$(info "Key is installed in MOK")
 endif
