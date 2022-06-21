@@ -14,11 +14,18 @@ BUILDDIR ?= /lib/modules/$(shell uname -r)/build
 THIS_MKFILE := $(lastword $(MAKEFILE_LIST))
 THIS_MKFILE_DIR := $(dir $(abspath $(THIS_MKFILE)))
 
+PREFIX_DRIVER_PATH ?=
+SUFIX_DRIVER_PATH ?=
+ifneq ($(PREFIX_DRIVER_PATH)$(SUFFIX_DRIVER_PATH),)
+DRIVER_PATH := $(PREFIX_DRIVER_PATH)/$(TARGET_MODULE)/$(TARGET_VERSION)/$(SUFIX_DRIVER_PATH)
+else
+DRIVER_PATH ?= $(THIS_MKFILE_DIR)
+endif
 IS_SYSTEMD_USED=$(shell pidof systemd && echo "systemd" || echo "other")
 IS_THERE_CDA_GROUP=$(shell getent group dg_orca && echo "yes" || echo "no")
 IS_USER_IN_CDA_GROUP=$(shell groups | grep dg_orca && echo "yes" || echo "no")
 
-IS_SB_EN ?= ?= $(shell sudo mokutil --sb-state | grep -ci "enabled")
+IS_SB_EN ?= $(shell sudo mokutil --sb-state | grep -ci "enabled")
 KEY_DER_PATH ?= /var/lib/shim-signed/mok/MOK.der
 KEY_BASENAME := $(basename $(KEY_DER_PATH))
 KEY_PRIV_PATH ?= $(KEY_BASENAME).priv
@@ -48,7 +55,15 @@ clean:
 	$(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) clean
 sign: export KBUILD_SIGN_PIN=$(KDER_SIGN_PIN)
 sign:
-	sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$(shell uname -r)/scripts/sign-file sha512 $(KEY_PRIV_PATH) $(KEY_DER_PATH) cdapci.ko
+ifeq ($(IS_SB_EN),1)
+ifneq ($(IS_KEY_PRESENT),no)
+	sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$(shell uname -r)/scripts/sign-file sha512 $(KEY_PRIV_PATH) $(KEY_DER_PATH) $(DRIVER_PATH)/cdapci.ko
+else
+	$(error "Key is not present")
+endif
+else
+	$(info "No need to sign the driver")
+endif
 preinstall:
 ifeq ($(IS_SB_EN),1)
 ifeq ($(IS_KEY_PRESENT),no)
@@ -99,7 +114,7 @@ install: preinstall
 	sudo -E $(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) modules_install
 	$(MAKE) -f $(THIS_MKFILE) postinstall
 
-preuninstall:
+postuninstall:
 ifneq ($(IS_SYSTEMD_USED),other)
 	@sudo -E rm -f /etc/modules-load.d/cdapci.conf
 endif
@@ -107,7 +122,7 @@ endif
 	@sudo -E rm -f /usr/local/bin/force_usr_mode.sh
 	@sudo -E rm -f /etc/udev/rules.d/66-cdapci.rules
 
-uninstall: preuninstall
+uninstall: postuninstall
 	@sudo -E rm -f $(shell modinfo -n $(TARGET_MODULE))
 	@sudo -E depmod
 
