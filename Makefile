@@ -8,11 +8,11 @@
 # version 2, as published by the Free Software Foundation.
 #
 TARGET_MODULE := cdapci
-TARGET_VERSION := $(shell grep "^MODULE_VERSION" cdadrv.c | cut -c 17-19)
-BUILDDIR ?= /lib/modules/$(shell uname -r)/build
-
 THIS_MKFILE := $(lastword $(MAKEFILE_LIST))
 THIS_MKFILE_DIR := $(dir $(abspath $(THIS_MKFILE)))
+
+TARGET_VERSION := $(shell grep "^MODULE_VERSION" $(THIS_MKFILE_DIR)/cdadrv.c | cut -c 17-19)
+BUILDDIR ?= /lib/modules/$(shell uname -r)/build
 
 PREFIX_DRIVER_PATH ?=
 SUFIX_DRIVER_PATH ?=
