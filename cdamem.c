@@ -486,7 +486,7 @@ int cda_alloc_mem(struct cda_dev *dev, void *owner, void __user *ureq)
 		&dev->pcidev->dev, 
 		req.size, 
 		&mblk->paddr, 
-		in_atomic() ? (GFP_ATOMIC | GFP_DMA32) : GFP_KERNEL);
+		in_atomic() ? (GFP_ATOMIC | GFP_DMA) : GFP_KERNEL);
 	if (!mblk->vaddr) {
 		dev_err(&dev->dev, "Can't alloc DMA memory (size %u)", req.size);
 		ret = -1;
