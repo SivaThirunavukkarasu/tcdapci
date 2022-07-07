@@ -6,10 +6,11 @@
 include /usr/share/dpkg/pkg-info.mk
 
 clean:
-	-$(MAKE) dkms-clean
+	$(MAKE) clean
 
 build:
-	-$(MAKE) dkms
+	-$(MAKE) dkms-clean
+	$(MAKE) dkms
 
 install:
 
