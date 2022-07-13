@@ -44,6 +44,12 @@ struct cda_bar {
 	struct cda_dev *dev;
 	struct bin_attribute mmap_attr;
 };
+#else
+#if __has_attribute(__fallthrough__)
+# define fallthrough                    __attribute__((__fallthrough__))
+#else
+# define fallthrough                    do {} while (0)  /* fallthrough */
+#endif
 #endif
 
 static int cda_alloc_msix(struct cda_dev *cdadev, uint32_t rvecs, struct cda_interrupts *ints)
@@ -111,7 +117,7 @@ int cda_init_interrupts(struct cda_dev *cdadev, void *owner, void __user *ureq)
 			return ret;
 		}
 		dev_warn(&cdadev->pcidev->dev, "No MSI-X vectors, try MSI. Error %x\n", ret);
-		// fall-through
+		fallthrough;
 	case MSI:
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
 		nvecs = pci_alloc_irq_vectors(cdadev->pcidev, 1, req.vectors, PCI_IRQ_MSI);
@@ -124,7 +130,7 @@ int cda_init_interrupts(struct cda_dev *cdadev, void *owner, void __user *ureq)
 			break;
 		}
 		dev_warn(&cdadev->pcidev->dev, "No MSI vectors, try legacy. Error %x\n", nvecs);
-		// fall-through
+		fallthrough;
 	case LEGACY_INTERRUPT:
 		ints->num = 1;
 		ints->type = LEGACY_INTERRUPT;
@@ -354,7 +360,7 @@ cdadev_bar_attr(index, "%d\n");
 #pragma GCC diagnostic warning "-Wformat"
 
 static ssize_t bar_attr_show(struct kobject *kobj, struct attribute *attr,
-			     char *buf)
+				 char *buf)
 {
 	struct cda_bar *bar = to_bar(kobj);
 	struct bar_sysfs_entry *entry =
@@ -399,7 +405,7 @@ static const struct vm_operations_struct pci_phys_vm_ops = {
 static int bar_mmap( struct file *file, 
 						struct kobject *kobj, 
 						struct bin_attribute *attr,
-		       			struct vm_area_struct *vma)
+			   			struct vm_area_struct *vma)
 {
 	struct cda_bar *bar = attr->private;
 	unsigned long requested = (vma->vm_end - vma->vm_start) >> PAGE_SHIFT;

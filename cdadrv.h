@@ -16,6 +16,13 @@
 
 struct cda_interrupts;
 struct cda_bar;
+struct cda_dev;
+// Dummy block for fast releasing
+struct cda_dummy_blk {
+	struct cda_dev *dev;
+	int index;
+};
+
 struct cda_dev {
     struct cdev cdev;
     struct device dev;
@@ -30,6 +37,7 @@ struct cda_dev {
 	struct cda_interrupts *ints;
 
 	struct kobject *kobj_mems;
+	struct cda_dummy_blk *dummy_blk;
 	struct idr mblk_idr;
 	spinlock_t mblk_sl;
 	struct list_head mem_blocks;

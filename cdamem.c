@@ -363,7 +363,7 @@ struct kobj_type memmap_type = {
 static int mblk_mmap( struct file *file, 
 						struct kobject *kobj, 
 						struct bin_attribute *attr,
-		       			struct vm_area_struct *vma)
+			   			struct vm_area_struct *vma)
 {
 	struct cda_mblk *mblk = attr->private;
 	unsigned long requested = (vma->vm_end - vma->vm_start) >> PAGE_SHIFT;
@@ -372,15 +372,15 @@ static int mblk_mmap( struct file *file,
 	if (vma->vm_pgoff + requested > pages)
 		return -EINVAL;
 
-    if( dma_mmap_coherent(  &mblk->dev->pcidev->dev,
+	if( dma_mmap_coherent(  &mblk->dev->pcidev->dev,
 							vma,
 							mblk->vaddr,
 							mblk->paddr,
 							mblk->req_size) )
-    {
-        dev_err(&mblk->dev->pcidev->dev, "DMA remapping failed");
-        return -ENXIO;
-    }
+	{
+		dev_err(&mblk->dev->pcidev->dev, "DMA remapping failed");
+		return -ENXIO;
+	}
 	return 0;
 }
 
@@ -390,7 +390,7 @@ int cda_publish_mblk(struct cda_mblk *mblk)
 	struct bin_attribute *mmap_attr = &mblk->mmap_attr;
 
 	ret = kobject_add(  &mblk->kobj, mblk->dev->kobj_mems,
-			    		"%04d", mblk->index);
+						"%04d", mblk->index);
 	if (ret)
 		goto err_add;
 
@@ -424,7 +424,7 @@ int cda_publish_memmap(struct cda_mmap *memmap)
 	struct bin_attribute *mmap_attr = &memmap->mmap_attr;
 
 	ret = kobject_add(  &memmap->kobj, memmap->dev->kobj_mems,
-			    		"%04d", memmap->index);
+						"%04d", memmap->index);
 	if (ret)
 		goto err_add;
 
@@ -475,7 +475,7 @@ int cda_alloc_mem(struct cda_dev *dev, void *owner, void __user *ureq)
 	idr_preload(in_atomic() ? GFP_ATOMIC : GFP_KERNEL);
 	spin_lock(&dev->mblk_sl);
 	ret = idr_alloc(&dev->mblk_idr, mblk,
-		0, 0, in_atomic() ? GFP_ATOMIC : GFP_KERNEL);
+		1L, 0, in_atomic() ? GFP_ATOMIC : GFP_KERNEL);
 	spin_unlock(&dev->mblk_sl);
 	idr_preload_end();
 	if (ret < 0)
@@ -515,7 +515,7 @@ err_copy_to_user:
 	cda_hide_mblk(mblk);
 err_publish:
 	dma_free_coherent(&dev->pcidev->dev, mblk->req_size,
-			    mblk->vaddr, mblk->paddr);
+				mblk->vaddr, mblk->paddr);
 err_dma_alloc:
 	spin_lock(&dev->mblk_sl);
 	idr_remove(&dev->mblk_idr, idx);
@@ -537,25 +537,32 @@ static void cda_free_mem(struct cda_mblk *mblk)
 int cda_free_mem_by_idx(struct cda_dev *dev, void *owner, void __user *ureq)
 {
 	int memidx;
-    struct cda_mblk *mblk;
+	struct cda_mblk *mblk;
 	if (copy_from_user(&memidx, (void __user *)ureq, sizeof(memidx))) {
 		return -EFAULT;
 	}
 
-    spin_lock(&dev->mblk_sl);
-    mblk = idr_find(&dev->mblk_idr, memidx);
-    if (mblk) {
+	spin_lock(&dev->mblk_sl);
+	mblk = idr_find(&dev->mblk_idr, memidx);
+	if (mblk && mblk->index == memidx) {
 		if( mblk->owner != owner ) {
 			dev_warn(&dev->dev, "Free mblk from another owner\n");
+			idr_replace(&dev->mblk_idr, dev->dummy_blk, memidx);
 		}
-		idr_remove(&dev->mblk_idr, memidx);
 		list_del(&mblk->list);
+	} else if(mblk) {
+		dev_warn(&dev->dev, "Free mblk with index %d, required %d\n", mblk->index, memidx);
 	}
-    spin_unlock(&dev->mblk_sl);
-    if (!mblk)
-        return -ENOENT;
-    cda_free_mem(mblk);
-    return 0;
+	spin_unlock(&dev->mblk_sl);
+	if (!mblk)
+		return -ENOENT;
+	if (mblk->index) {
+		cda_free_mem(mblk);
+		spin_lock(&dev->mblk_sl);
+		idr_remove(&dev->mblk_idr, mblk->index);
+		spin_unlock(&dev->mblk_sl);
+	}
+	return 0;
 }
 
 void cda_free_dev_mem(struct cda_dev *dev, void *owner)
@@ -569,9 +576,9 @@ void cda_free_dev_mem(struct cda_dev *dev, void *owner)
 		list_replace_init(&dev->mem_blocks, &mblks);
 	} else {
 		list_for_each_entry_safe(mblk, tmp, &dev->mem_blocks, list) {
-			if( mblk->owner == owner ) {
-				idr_remove(&dev->mblk_idr, mblk->index);
+			if( mblk->index > 0L && mblk->owner == owner ) {
 				list_move(&mblk->list, &mblks);
+				idr_replace(&dev->mblk_idr, dev->dummy_blk, mblk->index);
 			}
 		}
 	}
@@ -579,8 +586,13 @@ void cda_free_dev_mem(struct cda_dev *dev, void *owner)
 	list_for_each_entry_safe(mblk, tmp, &mblks, list) {
 		// Unmap blocks owned by specified owner or all if owner is NULL
 		cda_free_mem(mblk);
+		if( owner != NULL ){
+			spin_lock(&dev->mblk_sl);
+			idr_remove(&dev->mblk_idr, mblk->index);
+			spin_unlock(&dev->mblk_sl);
+		}
 	}
-};
+}
 
 static void cda_release_map(struct cda_mmap *memmap)
 {	
@@ -666,7 +678,7 @@ int cda_map_mem(struct cda_dev *dev, void *owner, void __user *ureq)
 	idr_preload(in_atomic() ? GFP_ATOMIC : GFP_KERNEL);
 	spin_lock(&dev->mblk_sl);
 	ret = idr_alloc(&dev->mblk_idr, memmap,
-		0, 0, in_atomic() ? GFP_ATOMIC : GFP_KERNEL);
+		1L, 0, in_atomic() ? GFP_ATOMIC : GFP_KERNEL);
 	spin_unlock(&dev->mblk_sl);
 	idr_preload_end();
 	if (ret < 0)
@@ -745,25 +757,31 @@ static void cda_free_map(struct cda_mmap *memmap)
 int cda_unmap_mem_by_idx(struct cda_dev *dev, void *owner, void __user *ureq)
 {
 	int memidx;
-    struct cda_mmap *memmap;
-	if (copy_from_user(&memidx, (void __user *)ureq, sizeof(memidx))) {
+	struct cda_mmap *memmap;
+	if (copy_from_user(&memidx, (void __user *)ureq, sizeof(memidx)))
 		return -EFAULT;
-	}
 
-    spin_lock(&dev->mblk_sl);
-    memmap = idr_find(&dev->mblk_idr, memidx);
-    if (memmap) {
-		if( memmap->owner != owner ) {
+	spin_lock(&dev->mblk_sl);
+	memmap = idr_find(&dev->mblk_idr, memidx);
+	if (memmap && memmap->index == memidx) {
+		if( memmap->owner != owner )
 			dev_warn(&dev->dev, "Unmap buffer by another user\n");
-		}
-		idr_remove(&dev->mblk_idr, memidx);
+		idr_replace(&dev->mblk_idr, dev->dummy_blk, memidx);
 		list_del(&memmap->list);
+	} else if (memmap)
+		dev_warn(&dev->dev, "Unmap buffer with index %d, required %d\n", memmap->index, memidx);
+	spin_unlock(&dev->mblk_sl);
+
+	if (!memmap)
+		return -ENOENT; // Somebody may already release this block in parallel
+
+	if( memmap->index ) {
+		cda_free_map(memmap);
+		spin_lock(&dev->mblk_sl);
+		idr_remove(&dev->mblk_idr, memmap->index);
+		spin_unlock(&dev->mblk_sl);
 	}
-    spin_unlock(&dev->mblk_sl);
-    if (!memmap)
-        return -ENOENT;
-    cda_free_map(memmap);
-    return 0;
+	return 0;
 }
 
 void cda_unmmap_dev_mem(struct cda_dev *dev, void *owner)
@@ -776,8 +794,8 @@ void cda_unmmap_dev_mem(struct cda_dev *dev, void *owner)
 		list_replace_init(&dev->mem_maps, &memmaps);
 	} else {
 		list_for_each_entry_safe(memmap, tmp, &dev->mem_maps, list) {
-			if( memmap->owner == owner ) {
-				idr_remove(&dev->mblk_idr, memmap->index);
+			if( memmap->index > 0L && memmap->owner == owner ) {
+				idr_replace(&dev->mblk_idr, dev->dummy_blk, memmap->index);
 				list_move(&memmap->list, &memmaps);
 			}
 		}
@@ -786,6 +804,11 @@ void cda_unmmap_dev_mem(struct cda_dev *dev, void *owner)
 	list_for_each_entry_safe(memmap, tmp, &memmaps, list) {
 		// Unmap blocks owned by specified owner or all if owner is NULL
 		cda_free_map(memmap);
+		if( owner != NULL ){
+			spin_lock(&dev->mblk_sl);
+			idr_remove(&dev->mblk_idr, memmap->index);
+			spin_unlock(&dev->mblk_sl);
+		}
 	}
 }
 
