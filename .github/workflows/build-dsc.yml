@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install prerequisites
-        run: sudo apt install gnupg dput dh-make devscripts lintian dpkg-dev reprepro
+        run: sudo apt install gnupg dput dh-make devscripts lintian dpkg-dev reprepro dkms
       - name: Check out repository code
         uses: actions/checkout@v2
         with:
