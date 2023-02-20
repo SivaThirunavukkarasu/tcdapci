@@ -389,10 +389,18 @@ static struct attribute *bar_attrs[] = {
 	NULL,
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)
+ATTRIBUTE_GROUPS(bar);
+#endif
+
 static struct kobj_type bar_type = {
 	.sysfs_ops = &bar_ops,
 	.release = bar_release,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)
+	.default_groups = bar_groups,
+#else
 	.default_attrs = bar_attrs,
+#endif
 };
 
 // Secure enable support

@@ -245,12 +245,19 @@ static struct attribute *mblk_attrs[] = {
 	NULL,
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)
+ATTRIBUTE_GROUPS(mblk);
+#endif
 static const struct sysfs_ops mblk_ops = {
 	.show = mblk_attr_show,
 };
 
 struct kobj_type mblk_type = {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)
+	.default_groups = mblk_groups,
+#else
 	.default_attrs = mblk_attrs,
+#endif
 	.sysfs_ops = &mblk_ops,
 	.release = mblk_release,
 };
@@ -331,6 +338,10 @@ static struct attribute *memmap_attrs[] = {
 	NULL,
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)
+ATTRIBUTE_GROUPS(memmap);
+#endif
+
 static ssize_t memmap_attr_show(struct kobject *kobj, 
 	struct attribute *attr, char *buf)
 {
@@ -355,7 +366,11 @@ static const struct sysfs_ops memmap_ops = {
 };
 
 struct kobj_type memmap_type = {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)
+	.default_groups = memmap_groups,
+#else
 	.default_attrs = memmap_attrs,
+#endif
 	.sysfs_ops = &memmap_ops,
 	.release = memmap_release,
 };
@@ -596,7 +611,7 @@ void cda_free_dev_mem(struct cda_dev *dev, void *owner)
 
 static void cda_release_map(struct cda_mmap *memmap)
 {	
-	pci_unmap_sg(memmap->dev->pcidev, memmap->sgt.sgl, memmap->sgt.orig_nents, DMA_BIDIRECTIONAL);
+	dma_unmap_sg(memmap->dev->pcidev == NULL ? NULL : &memmap->dev->pcidev->dev, memmap->sgt.sgl, memmap->sgt.orig_nents, DMA_BIDIRECTIONAL);
 	unpin_user_pages_dirty_lock(memmap->pages, memmap->blk_cnt, 1);
 	memmap->mapped_blk_cnt = 0;
 }
@@ -622,7 +637,7 @@ static int cda_perform_mapping(
 		len -= nbytes;
 	}
 
-	nents = pci_map_sg(memmap->dev->pcidev, memmap->sgt.sgl, memmap->sgt.orig_nents, DMA_BIDIRECTIONAL);
+	nents = dma_map_sg(&memmap->dev->pcidev->dev, memmap->sgt.sgl, memmap->sgt.orig_nents, DMA_BIDIRECTIONAL);
 	if (!nents) {
 		dev_err(&memmap->dev->dev, "map sgl failed, sgt 0x%p.\n", &memmap->sgt);
 		return -EIO;

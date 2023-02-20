@@ -122,7 +122,7 @@ install: preinstall
 	sudo -E $(MAKE) -C $(BUILDDIR) M=$(THIS_MKFILE_DIR) modules_install
 	$(MAKE) -f $(THIS_MKFILE) postinstall
 
-postuninstall:
+preuninstall:
 ifneq ($(IS_SYSTEMD_USED),other)
 	@sudo -E rm -f /etc/modules-load.d/cdapci.conf
 endif
@@ -130,7 +130,7 @@ endif
 	@sudo -E rm -f /usr/local/bin/force_usr_mode.sh
 	@sudo -E rm -f /etc/udev/rules.d/66-cdapci.rules
 
-uninstall: postuninstall
+uninstall: preuninstall
 	@sudo -E rm -f $(shell modinfo -n $(TARGET_MODULE))
 	@sudo -E depmod
 
@@ -142,6 +142,6 @@ dkms: clean
 	@sudo -E dkms install $(TARGET_MODULE) -v $(TARGET_VERSION)
 
 dkms-clean:
-	@sudo -E dkms remove -m $(TARGET_MODULE)/$(TARGET_VERSION) --all
-	@sudo -E rm -rf /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
+	-@$(shell ls /usr/src/ | grep $(TARGET_MODULE) | sed 's|-|/|g' | while read line ; do sudo -E dkms remove -m $$line --all ; done)
+	-@sudo -E rm -rf /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
 
