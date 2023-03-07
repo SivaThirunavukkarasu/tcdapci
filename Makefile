@@ -62,7 +62,7 @@ sign: export KBUILD_SIGN_PIN=$(KDER_SIGN_PIN)
 sign:
 ifeq ($(IS_SB_EN),1)
 ifneq ($(IS_KEY_PRESENT),no)
-	sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$(shell uname -r)/scripts/sign-file sha512 $(KEY_PRIV_PATH) $(KEY_DER_PATH) $(DRIVER_PATH)/cdapci.ko
+	$(shell echo $$(KBUILD_SIGN_PIN), $(DRIVER_PATH), 123 ; sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$$(uname -r)/scripts/sign-file sha512 $(KEY_PRIV_PATH) $(KEY_DER_PATH) $(DRIVER_PATH)/cdapci.ko)
 else
 	$(error "Key is not present")
 endif
@@ -142,6 +142,5 @@ dkms: clean
 	@sudo -E dkms install $(TARGET_MODULE) -v $(TARGET_VERSION)
 
 dkms-clean:
-	-@$(shell ls /usr/src/ | grep $(TARGET_MODULE) | sed 's|-|/|g' | while read line ; do sudo -E dkms remove -m $$line --all ; done)
-	-@sudo -E rm -rf /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
-
+	-$(shell for res in `ls /usr/src/ | grep $(TARGET_MODULE) | sed 's|-|/|g'` ; do sudo -E dkms remove -m $$res --all ; done)
+	-sudo -E rm -rf /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
