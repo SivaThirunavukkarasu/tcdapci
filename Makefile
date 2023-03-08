@@ -62,7 +62,7 @@ sign: export KBUILD_SIGN_PIN=$(KDER_SIGN_PIN)
 sign:
 ifeq ($(IS_SB_EN),1)
 ifneq ($(IS_KEY_PRESENT),no)
-	$(shell echo $$(KBUILD_SIGN_PIN), $(DRIVER_PATH), 123 ; sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$$(uname -r)/scripts/sign-file sha512 $(KEY_PRIV_PATH) $(KEY_DER_PATH) $(DRIVER_PATH)/cdapci.ko)
+	$(shell sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$$(uname -r)/scripts/sign-file sha512 $(KEY_PRIV_PATH) $(KEY_DER_PATH) $(DRIVER_PATH)/cdapci.ko )
 else
 	$(error "Key is not present")
 endif
