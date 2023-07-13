@@ -5,22 +5,17 @@
 
 include /usr/share/dpkg/pkg-info.mk
 
-clean:
-	$(MAKE) clean
+%:
+	dh $@ --with dkms
 
-build:
-	-$(MAKE) dkms-clean
-	$(MAKE) dkms
+override_dh_install:
+	dh_install * usr/src/cdapci-$(DEB_VERSION_UPSTREAM)/
 
-install:
+override_dh_dkms:
+	dh_dkms -V $(DEB_VERSION_UPSTREAM)
 
-build-arch:
-
-build-indep:
-
-binary:
-
-binary-arch:
-
-binary-indep:
-
+override_dh_auto_configure:
+override_dh_auto_build:
+override_dh_auto_test:
+override_dh_auto_install:
+override_dh_auto_clean:
