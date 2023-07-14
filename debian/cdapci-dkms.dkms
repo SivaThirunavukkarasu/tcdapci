@@ -1,0 +1,8 @@
+PACKAGE_NAME="cdapci"
+PACKAGE_VERSION="#MODULE_VERSION#"
+BUILT_MODULE_NAME[0]="$PACKAGE_NAME"
+DEST_MODULE_LOCATION[0]="/extra"
+AUTOINSTALL="yes"
+PRE_INSTALL="pre_install.sh $dkms_tree $kernelver/$(arch)/module"
+POST_INSTALL="post_install.sh"
+PRE_REMOVE="pre_rem.sh"
