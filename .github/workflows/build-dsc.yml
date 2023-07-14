@@ -50,7 +50,7 @@ jobs:
           git config --global user.name 'Alexander Bolotov'
           git config --global user.email 'bolotov@degirum.com'
           git switch -c apt-staging-branch
+          git add *
           git commit -am "Automated diver source package commit"
           git push --set-upstream origin apt-staging-branch
         working-directory: ${{ github.workspace }}/target
-      - run: echo "Upload completed!"
