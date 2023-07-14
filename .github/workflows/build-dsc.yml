@@ -39,7 +39,7 @@ jobs:
           rm -rf ${{ github.workspace }}/target/docs/apt-repo
           mv ${{ github.workspace }}/repository ${{ github.workspace }}/target/docs/apt-repo
       - name: Build repository
-        run: reprepro --basedir ${{ github.workspace }}/target/docs/apt-repo includedsc ORCA ${{ github.workspace }}/orca-driver_${{ steps.version.outputs.VERSION }}.dsc
+        run: reprepro -V --basedir ${{ github.workspace }}/target/docs/apt-repo includedsc ORCA ${{ github.workspace }}/orca-driver_${{ steps.version.outputs.VERSION }}.dsc
         working-directory: ${{ github.workspace }}/target/docs/apt-repo
       - name: Clean up repository build files
         run: |
