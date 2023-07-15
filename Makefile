@@ -31,7 +31,6 @@ KEY_BASENAME := $(basename $(KEY_DER_PATH))
 KEY_PRIV_PATH ?= $(KEY_BASENAME).priv
 IS_KEY_PRESENT=$(shell test -f $(KEY_DER_PATH) && echo "yes" || echo "no")
 IS_PKEY_PRESENT=$(shell test -f $(KEY_PRIV_PATH) && echo "yes" || echo "no")
-KEY_IN_MOK=$(shell sudo mokutil --test-key $(KEY_DER_PATH) | grep -ci "is already enrolled")
 KDER_SIGN_PIN?=degirum
 DG_VID=1f0d
 XL_VID=10ee
@@ -71,6 +70,7 @@ else
 endif
 preinstall:
 ifeq ($(IS_SB_EN),1)
+KEY_IN_MOK=$(shell sudo mokutil --test-key $(KEY_DER_PATH) | grep -ci "is already enrolled")
 ifeq ($(IS_KEY_PRESENT),no)
 	$(warning "No MOK key. Create it")
 	sudo openssl req -new -x509 -newkey rsa:2048 -keyout $(KEY_PRIV_PATH) -outform DER -out $(KEY_DER_PATH) -days 36500 -subj "/CN=cdapci module signing key/" -passout pass:$(KDER_SIGN_PIN)
@@ -142,5 +142,6 @@ dkms: clean
 	@sudo -E dkms install $(TARGET_MODULE) -v $(TARGET_VERSION)
 
 dkms-clean:
-	-$(shell for res in `ls /usr/src/ | grep $(TARGET_MODULE) | sed 's|-|/|g'` ; do sudo -E dkms remove -m $$res --all ; done)
+	-$(shell sudo -E dkms remove -m cdapci/0.4 --all || true)
 	-sudo -E rm -rf /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
+#	-$(shell for res in `ls /usr/src/ | grep $(TARGET_MODULE) | sed 's|-|/|g'`; do sudo -E bash -c "dkms remove -m $$res --all"; done)
