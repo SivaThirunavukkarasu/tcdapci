@@ -17,6 +17,8 @@
 #include <linux/uaccess.h>
 #include <linux/mm.h>
 #include <linux/dma-mapping.h>
+#include <linux/io.h>
+#include <linux/uaccess.h>
 
 #include "cdadrv.h"
 #include "cdaioctl.h"
@@ -464,6 +466,31 @@ void cda_hide_memmap(struct cda_mmap *memmap)
 {
 	sysfs_remove_bin_file(&memmap->kobj, &memmap->mmap_attr);
 	kobject_del(&memmap->kobj);
+}
+
+int cda_reg_read(struct cda_dev *dev, void *owner, void __user *ureq) { 
+	struct register_rw req; 
+	// Copy request from user space into kernel space (req)
+	if (copy_from_user(&req, ureq, sizeof(req))) 
+		return -EFAULT;
+	// Address we want to read is req.address
+	unsigned int value = readl((void __iomem *)req.address);
+	req.value = value;
+	// Copy value from kernel space into user space
+	if (copy_to_user(ureq, &req, sizeof(req))) 
+		return -EFAULT;
+	return 0; // Success
+}
+
+int cda_reg_write(struct cda_dev *dev, void *owner, void __user *ureq) { 
+	struct register_rw req; 
+	// Copy request from user space into kernel space (req)
+	if (copy_from_user(&req, ureq, sizeof(req))) 
+		return -EFAULT;
+	// Address we want to write at is req.address
+	// Value we want to write is req.value
+	writel(req.value, (void __iomem *)req.address);
+	return 0; // Success
 }
 
 int cda_alloc_mem(struct cda_dev *dev, void *owner, void __user *ureq)

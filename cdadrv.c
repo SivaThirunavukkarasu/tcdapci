@@ -339,6 +339,11 @@ static long cda_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 
 	case CDA_SEM_REL:
 		return cda_sem_rel(cdadev, (void *)file, (void __user *) arg);
+	
+	case CDA_REG_READ:
+		return cda_reg_read(cdadev, (void *)file, (void __user *) arg);
+	case CDA_REG_WRITE:
+		return cda_reg_write(cdadev, (void *)file, (void __user *) arg);
 
 	default:
 		return -ENOTTY;
