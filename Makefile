@@ -74,7 +74,7 @@ else
 endif
 preinstall:
 ifeq ($(IS_SB_EN),1)
-KEY_IN_MOK=$(shell sudo mokutil --test-key $(KEY_DER_PATH) | grep -ci "is already enrolled")
+	KEY_IN_MOK=$(shell sudo mokutil --test-key $(KEY_DER_PATH) | grep -ci "is already enrolled")
 ifeq ($(IS_KEY_PRESENT),no)
 	$(warning "No MOK key. Create it")
 	sudo openssl req -new -x509 -newkey rsa:2048 -keyout $(KEY_PRIV_PATH) -outform DER -out $(KEY_DER_PATH) -days 36500 -subj "/CN=cdapci module signing key/" -passout pass:$(KDER_SIGN_PIN)

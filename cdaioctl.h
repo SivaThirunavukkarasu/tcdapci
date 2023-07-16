@@ -25,11 +25,6 @@
 #define CDA_REG_READ _IOR(CDA_IOCTL_MAGIC, 0xB, long)
 #define CDA_REG_WRITE _IOW(CDA_IOCTL_MAGIC, 0xC, long)
 
-struct register_rw {
-	uint32_t address;
-	uint32_t value;
-};
-
 struct cda_alloc_mem {
 	uint32_t size;
 	uint32_t index;
@@ -66,4 +61,10 @@ struct cda_int_lock {
 struct cda_sem_aq {
 	uint32_t sem_id;
 	uint64_t time_ns;
+};
+
+struct register_rw {
+	uint32_t bar;
+	uint64_t address;
+	uint32_t value;
 };

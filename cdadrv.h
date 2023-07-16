@@ -15,7 +15,6 @@
 #define CDA_MAX_DRV_SEMAPHORES (16)
 
 struct cda_interrupts;
-struct cda_bar;
 struct cda_dev;
 // Dummy block for fast releasing
 struct cda_dummy_blk {
@@ -23,6 +22,18 @@ struct cda_dummy_blk {
 	int index;
 };
 
+struct cda_bar {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+	struct kobject kobj;
+	struct bin_attribute mmap_attr;
+#endif
+	/* struct resource *res; */
+	int index;
+	phys_addr_t paddr;
+	phys_addr_t len;
+	void *vaddr;
+	struct cda_dev *dev;
+};
 struct cda_dev {
     struct cdev cdev;
     struct device dev;
@@ -46,8 +57,8 @@ struct cda_dev {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
 	// Security kernel lock needs w/a to access BARs
 	struct kobject *kobj_bars;
-	struct cda_bar *sysfs_bar[PCI_ROM_RESOURCE]; // 6 BARs excl. ROM
 #endif
+	struct cda_bar *inmap_bar[PCI_ROM_RESOURCE]; // Internally mapped BARs: 6 BARs excl. ROM
 	u64 semaphores[CDA_MAX_DRV_SEMAPHORES];
 	void *sem_owner[CDA_MAX_DRV_SEMAPHORES];
 };

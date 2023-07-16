@@ -33,18 +33,7 @@ struct cda_interrupts {
 	struct msix_entry *msix_entries;
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
-struct cda_bar {
-	struct kobject kobj;
-	/* struct resource *res; */
-	int index;
-	phys_addr_t paddr;
-	phys_addr_t len;
-	void *vaddr;
-	struct cda_dev *dev;
-	struct bin_attribute mmap_attr;
-};
-#else
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)
 #if __has_attribute(__fallthrough__)
 # define fallthrough                    __attribute__((__fallthrough__))
 #else
@@ -466,7 +455,7 @@ int cda_open_bars(struct cda_dev *cdadev)
 		bar->len = pci_resource_len(cdadev->pcidev, i);
 		bar->vaddr = NULL;
 		bar->dev = cdadev;
-		cdadev->sysfs_bar[i] = bar;
+		cdadev->inmap_bar[i] = bar;
 		kobject_init(&bar->kobj, &bar_type);
 
 		if( (bar->vaddr = pci_iomap(cdadev->pcidev, i, bar->len)) == NULL )
@@ -509,11 +498,11 @@ void cda_release_bars(struct cda_dev *cdadev)
 	int i;
 	int bars = pci_select_bars(cdadev->pcidev, IORESOURCE_MEM);
 	for( i = 0; i < PCI_ROM_RESOURCE; i++ ) {
-		struct cda_bar *bar = cdadev->sysfs_bar[i];
+		struct cda_bar *bar = cdadev->inmap_bar[i];
 		if (!bar)
 			continue;
 
-		cdadev->sysfs_bar[i] = NULL;
+		cdadev->inmap_bar[i] = NULL;
 		sysfs_remove_bin_file(&bar->kobj, &bar->mmap_attr);
 		kobject_del(&bar->kobj);
 		kobject_put(&bar->kobj);
@@ -531,6 +520,8 @@ void cda_release_bars(struct cda_dev *cdadev)
 int cda_open_bars(struct cda_dev *cdadev)
 {
 	int i;
+	int ret = -EINVAL;
+	struct cda_bar *bar;
 	struct resource *res_child;
 	int bars = pci_select_bars(cdadev->pcidev, IORESOURCE_MEM);
 
@@ -544,9 +535,28 @@ int cda_open_bars(struct cda_dev *cdadev)
 				res_child->flags &= ~IORESOURCE_BUSY;
 				//printk("Drop busy bit for resource %d", i);
 			}
+
+			if( !(pci_resource_flags(cdadev->pcidev, i) & IORESOURCE_MEM) )
+				continue;
+
+			ret = -ENOMEM;
+			bar = kzalloc(sizeof(*bar), GFP_KERNEL);
+			if (!bar)
+				goto err;
+			bar->index = i;
+			bar->paddr = pci_resource_start(cdadev->pcidev, i);
+			bar->len = pci_resource_len(cdadev->pcidev, i);
+			bar->vaddr = NULL;
+			bar->dev = cdadev;
+			if( (bar->vaddr = pci_iomap(cdadev->pcidev, i, bar->len)) == NULL )
+				goto err;
+			cdadev->inmap_bar[i] = bar;
 		}
 	}
 	return 0;
+err:
+	cda_release_bars(cdadev);
+	return ret;
 }
 
 void cda_release_bars(struct cda_dev *cdadev)
@@ -554,6 +564,10 @@ void cda_release_bars(struct cda_dev *cdadev)
 	int i;
 	int bars = pci_select_bars(cdadev->pcidev, IORESOURCE_MEM);
 	for( i = 0; i < PCI_ROM_RESOURCE; i++ ) {
+		struct cda_bar *bar = cdadev->inmap_bar[i];
+		if (!bar)
+			continue;
+		cdadev->inmap_bar[i] = NULL;
 		if( bars & (1 << i) ) {
 			cdadev->pcidev->resource[i].child->flags = cdadev->stored_flags[i];
 			printk("Restore resource %d flag: %lx\n", i, cdadev->stored_flags[i]);
