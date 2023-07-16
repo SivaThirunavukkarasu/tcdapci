@@ -37,6 +37,10 @@ XL_VID=10ee
 DG_GROUP=dg_orca
 VIDS="$(DG_VID) $(XL_VID)"
 
+# Use home directory to obtain real user's name, not root
+HOME_DIRECTORY_NAME=$(shell cd ~; pwd)
+REAL_USER_NAME=$(shell basename $(HOME_DIRECTORY_NAME))
+
 UDEV_RULE0='SUBSYSTEM=="cda", MODE="0660", GROUP="$(DG_GROUP)"'
 UDEV_RULE1='SUBSYSTEM=="cda", ACTION=="add", RUN+="/usr/local/bin/force_usr_mode.sh"'
 #
@@ -98,11 +102,11 @@ endif
 ifeq ($(IS_THERE_CDA_GROUP),no)
 	$(warning "No group cda. Create it. And add current user")
 	@sudo -E groupadd $(DG_GROUP)
-	@sudo -E usermod -a -G $(DG_GROUP) $$(whoami)
+	@sudo -E usermod -a -G $(DG_GROUP) $(REAL_USER_NAME)
 else
 ifeq ($(IS_USER_IN_CDA_GROUP),no)
 	$(warning "Group cda exists. Add current user")
-	@sudo -E usermod -a -G $(DG_GROUP) $$(whoami)
+	@sudo -E usermod -a -G $(DG_GROUP) $(REAL_USER_NAME)
 endif
 endif
 	@echo $(FORCE_USR_MODE0) | sudo -E tee -i /usr/local/bin/force_usr_mode.sh > /dev/null

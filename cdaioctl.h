@@ -22,6 +22,13 @@
 #define CDA_INT_CANCEL _IOWR(CDA_IOCTL_MAGIC, 0x8, long)
 #define CDA_SEM_AQ _IOW(CDA_IOCTL_MAGIC, 0x9, long)
 #define CDA_SEM_REL _IOW(CDA_IOCTL_MAGIC, 0xA, long)
+#define CDA_REG_READ _IOR(CDA_IOCTL_MAGIC, 0xB, long)
+#define CDA_REG_WRITE _IOW(CDA_IOCTL_MAGIC, 0xC, long)
+
+struct register_rw {
+	uint32_t address;
+	uint32_t value;
+};
 
 struct cda_alloc_mem {
 	uint32_t size;

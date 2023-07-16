@@ -69,3 +69,6 @@ void cda_release_bars(struct cda_dev *cdadev);
 int cda_sem_aq(struct cda_dev *cdadev, void *owner, void __user *ureq);
 int cda_sem_rel(struct cda_dev *cdadev, void *owner, void __user *ureq);
 void cda_sem_rel_by_owner(struct cda_dev *dev, void *owner);
+int cda_reg_read(struct cda_dev *cdadev, void *owner, void __user *ureq);
+int cda_reg_write(struct cda_dev *cdadev, void *owner, void __user *ureq);
+
