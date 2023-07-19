@@ -9,7 +9,7 @@ Vcs-Git: https://github.com/DeGirum/lincdadrv.git
 Vcs-Browser: https://github.com/DeGirum/lincdadrv
 
 Package: orca-driver
-Architecture: any
+Architecture: all
 Depends: dkms, ${shlibs:Depends}, ${misc:Depends}
 Description: ORCA kernel driver
  Kernel mode driver for ORCA AI accelerator.
