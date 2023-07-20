@@ -37,7 +37,7 @@ jobs:
         id: version
         working-directory: ${{ github.workspace }}/workspace
       - name: Build repository
-        run: reprepro -V --basedir ${{ github.workspace }}/target/docs/apt-repo includedeb ORCA ${{ github.workspace }}/orca-driver_${{ steps.version.outputs.VERSION }}_all.deb
+        run: reprepro -V --basedir ${{ github.workspace }}/target/docs/apt-repo includedeb ORCA ${{ github.workspace }}/orca-driver-dkms_${{ steps.version.outputs.VERSION }}_all.deb
         working-directory: ${{ github.workspace }}/target/docs/apt-repo
       - name: Clean up repository build files
         run: |
