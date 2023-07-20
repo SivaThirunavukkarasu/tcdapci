@@ -33,7 +33,7 @@ jobs:
         working-directory: ${{ github.workspace }}/workspace
       - name: Retrieve package version
         run: |
-          echo "VERSION=$(cat debian/files | sed 's/orca-driver_\(.*\)*_.*/\1/')" >> $GITHUB_OUTPUT
+          echo "VERSION=$(cat debian/files | sed 's/orca-driver_\(.*\)*_.*/\1/')" >> "$GITHUB_OUTPUT"
         id: version
         working-directory: ${{ github.workspace }}/workspace
       - name: Build repository
