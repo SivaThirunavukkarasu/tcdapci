@@ -33,11 +33,7 @@ jobs:
         working-directory: ${{ github.workspace }}/workspace
       - name: Retrieve package version
         run: |
-          cat debian/files
-          cat debian/files | head -1 >/tmp/files2
-          cat /tmp/files2
-          echo "VERSION=$(cat /tmp/files2 | sed 's/orca-driver_\(.*\)*_.*/\1/')" >> "$GITHUB_OUTPUT"
-          echo $VERSION
+          echo "VERSION=$(cat debian/files | sed -n 1p | sed 's/orca-driver-dkms_\(.*\)*_.*/\1/')" >> "$GITHUB_OUTPUT"
         id: version
         working-directory: ${{ github.workspace }}/workspace
       - name: Build repository
