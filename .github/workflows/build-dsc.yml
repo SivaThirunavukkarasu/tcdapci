@@ -40,8 +40,10 @@ jobs:
       - name: Retrieve package version
         run: |
           echo "VERSION=$(grep "^MODULE_VERSION" src/cdadrv.c | cut -c 17-19)" >> "$GITHUB_OUTPUT"
-          echo "Version ${{ steps.version.outputs.VERSION }} sourced from src/cdadrv.c"
         id: version
+        working-directory: ${{ github.workspace }}/workspace
+      - name: Report package version
+        run: echo "Version ${{ steps.version.outputs.VERSION }} sourced from src/cdadrv.c"
         working-directory: ${{ github.workspace }}/workspace
       - name: Update debian changelog
         run: |
@@ -50,7 +52,8 @@ jobs:
           git add debian/changelog
           git tag -a ${{ steps.version.outputs.VERSION }} -m '${{ github.event.inputs.changelog-description }}'
           git commit -m "Automated update of changelog file."
-          git push origin --tags
+          git push
+          git push --tags
         working-directory: ${{ github.workspace }}/workspace
       - name: Build package
         run: debuild -b
