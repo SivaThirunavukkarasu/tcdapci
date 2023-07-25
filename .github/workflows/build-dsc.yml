@@ -1,13 +1,22 @@
 name: Debian Source Package and Repository build
-on: [push]
+on:
+  workflow_dispatch:
+    inputs:
+      changelog-description:
+        description: "Description of changes for debian changelog file and Github tag."
+        type: string
+        required: true
+        default: ""
 jobs:
   Build-DSC-Repo:
     runs-on: ubuntu-latest
     steps:
-      - name: Install prerequisites
+      - name: Install prerequisites and set up git
         run: |
           sudo apt update
           sudo apt install gnupg dput dh-make devscripts lintian dpkg-dev reprepro dkms
+          git config --global user.name 'Alexander Bolotov'
+          git config --global user.email 'bolotov@degirum.com'
       - name: Check out repository code
         uses: actions/checkout@v2
         with:
@@ -28,16 +37,26 @@ jobs:
         with:
           gpg_private_key: ${{ secrets.DRIVER_GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
+      - name: Retrieve package version
+        run: |
+          echo "VERSION=$(grep "^MODULE_VERSION" src/cdadrv.c | cut -c 17-19)" >> "$GITHUB_OUTPUT"
+          echo "Version ${{ steps.version.outputs.VERSION }} sourced from src/cdadrv.c"
+        id: version
+        working-directory: ${{ github.workspace }}/workspace
+      - name: Update debian changelog
+        run: |
+          dch --newversion ${{ steps.version.outputs.VERSION }} --controlmaint "${{ github.event.inputs.changelog-description }}"
+          dch --release --controlmaint ""
+          git add debian/changelog
+          git tag -a ${{ steps.version.outputs.VERSION }} -m '${{ github.event.inputs.changelog-description }}'
+          git commit -m "Automated update of changelog file."
+          git push origin --tags
+        working-directory: ${{ github.workspace }}/workspace
       - name: Build package
         run: debuild -b
         working-directory: ${{ github.workspace }}/workspace
-      - name: Retrieve package version
-        run: |
-          echo "VERSION=$(cat debian/files | sed -n 1p | sed 's/orca-driver-dkms_\(.*\)*_.*/\1/')" >> "$GITHUB_OUTPUT"
-        id: version
-        working-directory: ${{ github.workspace }}/workspace
       - name: Build repository
-        run: reprepro -V --basedir ${{ github.workspace }}/target/docs/apt-repo includedeb ORCA ${{ github.workspace }}/orca-driver-dkms_${{ steps.version.outputs.VERSION }}_all.deb
+        run: reprepro -V --basedir ${{ github.workspace }}/target/docs/apt-repo includedeb ORCA ${{ github.workspace }}/cdapci-dkms_${{ steps.version.outputs.VERSION }}_all.deb
         working-directory: ${{ github.workspace }}/target/docs/apt-repo
       - name: Clean up repository build files
         run: |
@@ -45,10 +64,8 @@ jobs:
           rm -rf ${{ github.workspace }}/target/docs/apt-repo/conf
       - name: Commit results
         run: |
-          git config --global user.name 'Alexander Bolotov'
-          git config --global user.email 'bolotov@degirum.com'
           git switch -c apt-staging-branch
           git add *
-          git commit -am "Automated diver source package commit"
+          git commit -am "Automated diver source package commit."
           git push --set-upstream origin apt-staging-branch
         working-directory: ${{ github.workspace }}/target

@@ -7,7 +7,7 @@
 # under the terms and conditions of the GNU General Public License,
 # version 2, as published by the Free Software Foundation.
 #
-TARGET_MODULE := orca-driver
+TARGET_MODULE := cdapci
 THIS_MKFILE := $(lastword $(MAKEFILE_LIST))
 THIS_MKFILE_DIR := $(dir $(abspath $(THIS_MKFILE)))
 
@@ -66,7 +66,7 @@ sign: export KBUILD_SIGN_PIN=$(KDER_SIGN_PIN)
 sign:
 ifeq ($(IS_SB_EN),1)
 ifneq ($(IS_KEY_PRESENT),no)
-	$(shell sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$$(uname -r)/scripts/sign-file sha512 $(KEY_PRIV_PATH) $(KEY_DER_PATH) $(DRIVER_PATH)/orca-driver.ko )
+	$(shell sudo --preserve-env=KBUILD_SIGN_PIN -E /usr/src/linux-headers-$$(uname -r)/scripts/sign-file sha512 $(KEY_PRIV_PATH) $(KEY_DER_PATH) $(DRIVER_PATH)/cdapci.ko )
 else
 	$(error "Key is not present")
 endif
@@ -77,7 +77,7 @@ preinstall:
 ifeq ($(IS_SB_EN),1)
 ifeq ($(IS_KEY_PRESENT),no)
 	$(warning "No MOK key. Create it")
-	sudo openssl req -new -x509 -newkey rsa:2048 -keyout $(KEY_PRIV_PATH) -outform DER -out $(KEY_DER_PATH) -days 36500 -subj "/CN=orca-driver module signing key/" -passout pass:$(KDER_SIGN_PIN)
+	sudo openssl req -new -x509 -newkey rsa:2048 -keyout $(KEY_PRIV_PATH) -outform DER -out $(KEY_DER_PATH) -days 36500 -subj "/CN=cdapci module signing key/" -passout pass:$(KDER_SIGN_PIN)
 else
 	$(info "MOK key presented")
 endif
@@ -95,7 +95,7 @@ endif
 postinstall:
 	@sudo -E depmod
 ifneq ($(IS_SYSTEMD_USED),other)
-	@echo $(TARGET_MODULE) | sudo -E tee -i /etc/modules-load.d/orca-driver.conf > /dev/null
+	@echo $(TARGET_MODULE) | sudo -E tee -i /etc/modules-load.d/cdapci.conf > /dev/null
 else
 	$(warning "No module autostart on reboot")
 endif
@@ -118,8 +118,8 @@ endif
 	@echo $(FORCE_USR_MODE6) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
 	@echo $(FORCE_USR_MODE7) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
 	@sudo -E chmod +x /usr/local/bin/force_usr_mode.sh > /dev/null
-	@echo $(UDEV_RULE0) | sudo -E tee -i /etc/udev/rules.d/66-orca-driver.rules > /dev/null
-	@echo $(UDEV_RULE1) | sudo -E tee -a /etc/udev/rules.d/66-orca-driver.rules > /dev/null
+	@echo $(UDEV_RULE0) | sudo -E tee -i /etc/udev/rules.d/66-cdapci.rules > /dev/null
+	@echo $(UDEV_RULE1) | sudo -E tee -a /etc/udev/rules.d/66-cdapci.rules > /dev/null
 	@sudo -E udevadm control --reload-rules
 
 install: preinstall
@@ -128,11 +128,11 @@ install: preinstall
 
 preuninstall:
 ifneq ($(IS_SYSTEMD_USED),other)
-	@sudo -E rm -f /etc/modules-load.d/orca-driver.conf
+	@sudo -E rm -f /etc/modules-load.d/cdapci.conf
 endif
 	-sudo -E modprobe -r $(TARGET_MODULE)
 	@sudo -E rm -f /usr/local/bin/force_usr_mode.sh
-	@sudo -E rm -f /etc/udev/rules.d/66-orca-driver.rules
+	@sudo -E rm -f /etc/udev/rules.d/66-cdapci.rules
 
 uninstall: preuninstall
 	@sudo -E rm -f $(shell modinfo -n $(TARGET_MODULE))

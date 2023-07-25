@@ -1,10 +1,4 @@
-orca-driver-dkms (0.5.0.0) bionic; urgency=medium
-
-  * Update DKMS install scipts.
-
- -- Alexander Bolotov <bolotov@degirum.com>  Thu, 13 Jul 2023 17:44:38 -0800
-
-orca-driver-dkms (0.0.0.1) bionic; urgency=medium
+cdapci-dkms (0.1) bionic; urgency=medium
 
   * Initial Release.
 

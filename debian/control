@@ -1,4 +1,4 @@
-Source: orca-driver-dkms
+Source: cdapci-dkms
 Section: utils
 Priority: optional
 Maintainer: Alexander Bolotov <bolotov@degirum.com>
@@ -8,7 +8,7 @@ Homepage: https://degirum.com
 Vcs-Git: https://github.com/DeGirum/lincdadrv.git
 Vcs-Browser: https://github.com/DeGirum/lincdadrv
 
-Package: orca-driver-dkms
+Package: cdapci-dkms
 Architecture: all
 Depends: dkms, ${shlibs:Depends}, ${misc:Depends}
 Description: ORCA kernel driver

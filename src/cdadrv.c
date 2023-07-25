@@ -17,7 +17,7 @@
 MODULE_AUTHOR("DeGirum Corp., Egor Pomozov");
 MODULE_DESCRIPTION("CDA linux driver to access pci devices");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.4");
+MODULE_VERSION("0.5");
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,9,0)
 #error Too old kernel
