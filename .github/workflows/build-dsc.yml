@@ -1,5 +1,12 @@
 name: Debian Source Package and Repository build
-on: [push]
+on:
+  workflow_dispatch:
+    inputs:
+      changelog-description:
+        description: "Description of changes for debian changelog file and Github tag."
+        type: string
+        required: true
+        default: ""
 jobs:
   Build-DSC-Repo:
     runs-on: ubuntu-latest
