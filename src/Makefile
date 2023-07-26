@@ -23,7 +23,6 @@ DRIVER_PATH ?= $(THIS_MKFILE_DIR)
 endif
 IS_SYSTEMD_USED=$(shell pidof systemd && echo "systemd" || echo "other")
 IS_THERE_CDA_GROUP=$(shell getent group dg_orca && echo "yes" || echo "no")
-IS_USER_IN_CDA_GROUP=$(shell groups | grep dg_orca && echo "yes" || echo "no")
 
 IS_SB_EN ?= $(shell sudo mokutil --sb-state | grep -ci "enabled")
 KEY_DER_PATH ?= /var/lib/shim-signed/mok/MOK.der
@@ -37,10 +36,6 @@ DG_VID=1f0d
 XL_VID=10ee
 DG_GROUP=dg_orca
 VIDS="$(DG_VID) $(XL_VID)"
-
-# Use home directory to obtain real user's name, not root
-HOME_DIRECTORY_NAME=$(shell cd ~; pwd)
-REAL_USER_NAME=$(shell basename $(HOME_DIRECTORY_NAME))
 
 UDEV_RULE0='SUBSYSTEM=="cda", MODE="0660", GROUP="$(DG_GROUP)"'
 UDEV_RULE1='SUBSYSTEM=="cda", ACTION=="add", RUN+="/usr/local/bin/force_usr_mode.sh"'
@@ -100,15 +95,12 @@ else
 	$(warning "No module autostart on reboot")
 endif
 ifeq ($(IS_THERE_CDA_GROUP),no)
-	$(warning "No group cda. Create it. And add current user")
+	$(warning "No group dg_orca. Creating it.")
 	@sudo -E groupadd $(DG_GROUP)
-	@sudo -E usermod -a -G $(DG_GROUP) $(REAL_USER_NAME)
-else
-ifeq ($(IS_USER_IN_CDA_GROUP),no)
-	$(warning "Group cda exists. Add current user")
-	@sudo -E usermod -a -G $(DG_GROUP) $(REAL_USER_NAME)
 endif
-endif
+	$(warning "Adding users to dg_orca.")
+	@for ID in `cat /etc/passwd | grep /home | cut -d ':' -f1` ; do (sudo -E usermod -a -G $(DG_GROUP) $$ID) ; done
+
 	@echo $(FORCE_USR_MODE0) | sudo -E tee -i /usr/local/bin/force_usr_mode.sh > /dev/null
 	@echo $(FORCE_USR_MODE1) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
 	@echo $(FORCE_USR_MODE2) | sudo -E tee -a /usr/local/bin/force_usr_mode.sh > /dev/null
