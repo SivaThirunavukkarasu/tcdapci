@@ -11,24 +11,16 @@ jobs:
   Build-DSC-Repo:
     runs-on: ubuntu-latest
     steps:
-      - name: Install prerequisites
-        run: sudo apt install gnupg dput dh-make devscripts lintian dpkg-dev reprepro dkms
+      - name: Install prerequisites and set up git
+        run: |
+          sudo apt update
+          sudo apt install gnupg dput dh-make devscripts lintian dpkg-dev reprepro dkms
+          git config --global user.name 'Alexander Bolotov'
+          git config --global user.email 'bolotov@degirum.com'
       - name: Check out repository code
         uses: actions/checkout@v2
         with:
           path: workspace
-      - name: Relocate repository building configuration
-        run: mv ${{ github.workspace }}/workspace/repository-setup ${{ github.workspace }}/repository
-      - name: Import GPG key
-        id: import_gpg
-        uses: crazy-max/ghaction-import-gpg@v4
-        with:
-          gpg_private_key: ${{ secrets.DRIVER_GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
-      - name: Build package
-        run: debuild -S
-        working-directory: ${{ github.workspace }}/workspace
-      - run: echo "DSC package built!"
       - name: Check out target repository code
         uses: actions/checkout@v2
         with:
@@ -38,21 +30,45 @@ jobs:
       - name: Prepare repository build
         run: |
           rm -rf ${{ github.workspace }}/target/docs/apt-repo
-          mv ${{ github.workspace }}/repository ${{ github.workspace }}/target/docs/apt-repo
+          mv ${{ github.workspace }}/workspace/repository-setup ${{ github.workspace }}/target/docs/apt-repo
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.DRIVER_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
+      - name: Retrieve package version
+        run: |
+          echo "VERSION=$(grep "^MODULE_VERSION" src/cdadrv.c | cut -c 17-19)" >> "$GITHUB_OUTPUT"
+        id: version
+        working-directory: ${{ github.workspace }}/workspace
+      - name: Report package version
+        run: echo "Version ${{ steps.version.outputs.VERSION }} sourced from src/cdadrv.c"
+        working-directory: ${{ github.workspace }}/workspace
+      - name: Update debian changelog
+        run: |
+          dch --newversion ${{ steps.version.outputs.VERSION }} --controlmaint "${{ github.event.inputs.changelog-description }}"
+          dch --release --controlmaint ""
+          git add debian/changelog
+          git tag -a ${{ steps.version.outputs.VERSION }} -m '${{ github.event.inputs.changelog-description }}'
+          git commit -m "Automated update of changelog file."
+          git push
+          git push --tags
+        working-directory: ${{ github.workspace }}/workspace
+      - name: Build package
+        run: debuild -b
+        working-directory: ${{ github.workspace }}/workspace
       - name: Build repository
-        run: reprepro --basedir ${{ github.workspace }}/target/docs/apt-repo includedsc ORCA ${{ github.workspace }}/orca-driver_0.0.0.1.dsc
+        run: reprepro -V --basedir ${{ github.workspace }}/target/docs/apt-repo includedeb ORCA ${{ github.workspace }}/cdapci-dkms_${{ steps.version.outputs.VERSION }}_all.deb
         working-directory: ${{ github.workspace }}/target/docs/apt-repo
       - name: Clean up repository build files
         run: |
           rm -rf ${{ github.workspace }}/target/docs/apt-repo/db
           rm -rf ${{ github.workspace }}/target/docs/apt-repo/conf
-      - run: echo "Repository structure built!"
       - name: Commit results
         run: |
-          git config --global user.name 'Alexander Bolotov'
-          git config --global user.email 'bolotov@degirum.com'
           git switch -c apt-staging-branch
-          git commit -am "Automated diver source package commit"
+          git add *
+          git commit -am "Automated diver source package commit."
           git push --set-upstream origin apt-staging-branch
         working-directory: ${{ github.workspace }}/target
-      - run: echo "Upload completed!"
