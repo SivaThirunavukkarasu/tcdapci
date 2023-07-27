@@ -1,26 +1,21 @@
 #!/usr/bin/make -f
 # See debhelper(7) (uncomment to enable)
 # output every command that modifies files on the build system.
-#export DH_VERBOSE = 1
+# export DH_VERBOSE = 1
 
 include /usr/share/dpkg/pkg-info.mk
 
-clean:
-	$(MAKE) clean
+%:
+	dh $@ --with dkms
 
-build:
-	-$(MAKE) dkms-clean
-	$(MAKE) dkms
+override_dh_install:
+	dh_install src/* usr/src/cdapci-$(DEB_VERSION_UPSTREAM)/
 
-install:
+override_dh_dkms:
+	dh_dkms -V $(DEB_VERSION_UPSTREAM)
 
-build-arch:
-
-build-indep:
-
-binary:
-
-binary-arch:
-
-binary-indep:
-
+override_dh_auto_configure:
+override_dh_auto_build:
+override_dh_auto_test:
+override_dh_auto_install:
+override_dh_auto_clean:

@@ -1,6 +1,6 @@
-The Debian Package orca-driver
+The Debian Package cdapci-dkms
 ----------------------------
 
-Comments regarding the Package
+Package containing the DKMS driver for ORCA
 
  -- DeGirum <bolotov@degirum.com>  Tue, 01 Mar 2022 14:58:36 -0800
