@@ -469,20 +469,31 @@ void cda_hide_memmap(struct cda_mmap *memmap)
 }
 
 int cda_reg_read(struct cda_dev *dev, void *owner, void __user *ureq) { 
+	uint32_t nbar;
 	struct register_rw req; 
 	struct cda_bar *bar;
 	// Copy request from user space into kernel space (req)
 	if (copy_from_user(&req, ureq, sizeof(req))) 
 		return -EFAULT;
-	if( req.bar >= PCI_ROM_RESOURCE )
+	nbar = req.bar_opt & BAR_MASK;
+	if( nbar >= PCI_ROM_RESOURCE )
 		return -EINVAL;
-	if( dev->inmap_bar[req.bar] == NULL )
+	if( dev->inmap_bar[nbar] == NULL )
 		return -EINVAL;
-	bar = dev->inmap_bar[req.bar];
+	bar = dev->inmap_bar[nbar];
 	if( req.address >= bar->len )
 		return -EINVAL;
 	// Address we want to read is req.address
-	req.value = readl((void __iomem *)(bar->vaddr + req.address));
+	if( req.bar_opt & BAR_OPT_64_BITS )
+		req.value = readq((void __iomem *)(bar->vaddr + req.address));
+	else if( req.bar_opt & BAR_OPT_32_BITS )
+		req.value = readl((void __iomem *)(bar->vaddr + req.address));
+	else if( req.bar_opt & BAR_OPT_16_BITS )
+		req.value = readw((void __iomem *)(bar->vaddr + req.address));
+	else if( req.bar_opt & BAR_OPT_8_BITS )
+		req.value = readb((void __iomem *)(bar->vaddr + req.address));
+	else
+		req.value = readl((void __iomem *)(bar->vaddr + req.address));
 	// Copy value from kernel space into user space
 	if (copy_to_user(ureq, &req, sizeof(req))) 
 		return -EFAULT;
@@ -490,21 +501,32 @@ int cda_reg_read(struct cda_dev *dev, void *owner, void __user *ureq) {
 }
 
 int cda_reg_write(struct cda_dev *dev, void *owner, void __user *ureq) { 
-	struct register_rw req; 
+	uint32_t nbar = 0;
+	struct register_rw req;
 	struct cda_bar *bar;
 	// Copy request from user space into kernel space (req)
 	if (copy_from_user(&req, ureq, sizeof(req))) 
 		return -EFAULT;
-	if( req.bar >= PCI_ROM_RESOURCE )
+	nbar = req.bar_opt & BAR_MASK;
+	if( nbar >= PCI_ROM_RESOURCE )
 		return -EINVAL;
-	if( dev->inmap_bar[req.bar] == NULL )
+	if( dev->inmap_bar[nbar] == NULL )
 		return -EINVAL;
-	bar = dev->inmap_bar[req.bar];
+	bar = dev->inmap_bar[nbar];
 	if( req.address >= bar->len )
 		return -EINVAL;
 	// Address we want to write at is req.address
 	// Value we want to write is req.value
-	writel(req.value, (void __iomem *)(bar->vaddr + req.address));
+	if( req.bar_opt & BAR_OPT_64_BITS )
+		writeq(req.value, (void __iomem *)(bar->vaddr + req.address));
+	else if( req.bar_opt & BAR_OPT_32_BITS )
+		writel(req.value, (void __iomem *)(bar->vaddr + req.address));
+	else if( req.bar_opt & BAR_OPT_16_BITS )
+		writew(req.value, (void __iomem *)(bar->vaddr + req.address));
+	else if( req.bar_opt & BAR_OPT_8_BITS )
+		writeb(req.value, (void __iomem *)(bar->vaddr + req.address));
+	else
+		writel(req.value, (void __iomem *)(bar->vaddr + req.address));
 	return 0; // Success
 }
 

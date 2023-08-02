@@ -63,8 +63,14 @@ struct cda_sem_aq {
 	uint64_t time_ns;
 };
 
+#define BAR_MASK		0x0F
+#define BAR_OPT_8_BITS  0x10
+#define BAR_OPT_16_BITS 0x20
+#define BAR_OPT_32_BITS 0x40
+#define BAR_OPT_64_BITS 0x80
+
 struct register_rw {
-	uint32_t bar;
+	uint32_t bar_opt;
 	uint64_t address;
-	uint32_t value;
+	uint64_t value;
 };

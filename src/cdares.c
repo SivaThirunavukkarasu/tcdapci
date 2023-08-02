@@ -529,11 +529,15 @@ int cda_open_bars(struct cda_dev *cdadev)
 		// Drop busy bit
 		if( bars & (1 << i) ) {
 			res_child = cdadev->pcidev->resource[i].child;
-			cdadev->stored_flags[i] = res_child->flags;
-			printk("Store resource %d flag: 0x%lx\n", i, res_child->flags);
-			if( IORESOURCE_BUSY & res_child->flags ) {
-				res_child->flags &= ~IORESOURCE_BUSY;
-				//printk("Drop busy bit for resource %d", i);
+			if( res_child != NULL ) {
+				cdadev->stored_flags[i] = res_child->flags;
+				printk("Store resource %d flag: 0x%lx\n", i, res_child->flags);
+				if( IORESOURCE_BUSY & res_child->flags ) {
+					res_child->flags &= ~IORESOURCE_BUSY;
+					//printk("Drop busy bit for resource %d", i);
+				}
+			} else {
+				printk("Resource for BAR %d is NULL\n", i);
 			}
 
 			if( !(pci_resource_flags(cdadev->pcidev, i) & IORESOURCE_MEM) )
