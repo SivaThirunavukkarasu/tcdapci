@@ -37,7 +37,7 @@ XL_VID=10ee
 DG_GROUP=dg_orca
 VIDS="$(DG_VID) $(XL_VID)"
 
-UDEV_RULE0='SUBSYSTEM=="cda", MODE="0660", GROUP="$(DG_GROUP)"'
+UDEV_RULE0='SUBSYSTEM=="cda", MODE="0666", GROUP="$(DG_GROUP)"'
 UDEV_RULE1='SUBSYSTEM=="cda", ACTION=="add", RUN+="/usr/local/bin/force_usr_mode.sh"'
 #
 FORCE_USR_MODE0="\#!/bin/sh"
