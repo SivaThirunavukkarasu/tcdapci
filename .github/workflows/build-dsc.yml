@@ -39,7 +39,7 @@ jobs:
           passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
       - name: Retrieve package version
         run: |
-          echo "VERSION=$(grep "^MODULE_VERSION" src/cdadrv.c | cut -c 17-19)" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$(grep "^MODULE_VERSION" src/cdadrv.c | cut -c 17-23)" >> "$GITHUB_OUTPUT"
         id: version
         working-directory: ${{ github.workspace }}/workspace
       - name: Report package version
