@@ -131,7 +131,8 @@ uninstall: preuninstall
 	@sudo -E depmod
 
 dkms: clean
-	@sudo -E sed -i "s/^PACKAGE_VERSION=\"[0-9]\.[0-9]\"/PACKAGE_VERSION=\"$(TARGET_VERSION)\"/g" dkms.conf
+	@sudo -E sed -e 's/@_PACKAGE_VERSION@/$(TARGET_VERSION)/'\
+	             -e 's/@_PACKAGE_NAME@/$(TARGET_MODULE)/' -i dkms.conf
 	@sudo -E mkdir -p /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
 	@sudo -E cp -Rf * /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)/
 	@sudo -E dkms add -m $(TARGET_MODULE) -v $(TARGET_VERSION)
@@ -140,3 +141,4 @@ dkms: clean
 dkms-clean:
 	-$(shell for res in `ls /usr/src/ | grep $(TARGET_MODULE) | sed 's|-|/|g'` ; do sudo -E dkms remove -m $$res --all ; done)
 	-sudo -E rm -rf /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
+
