@@ -11,7 +11,7 @@ TARGET_MODULE := cdapci
 THIS_MKFILE := $(lastword $(MAKEFILE_LIST))
 THIS_MKFILE_DIR := $(dir $(abspath $(THIS_MKFILE)))
 
-TARGET_VERSION := $(shell grep "^MODULE_VERSION" $(THIS_MKFILE_DIR)/cdadrv.c | cut -c 17-19)
+TARGET_VERSION := $(shell grep "^MODULE_VERSION" $(THIS_MKFILE_DIR)/cdadrv.c | cut -c 17-23)
 BUILDDIR ?= /lib/modules/$(shell uname -r)/build
 
 PREFIX_DRIVER_PATH ?=
@@ -132,13 +132,13 @@ uninstall: preuninstall
 
 dkms: clean
 	@sudo -E sed -e 's/@_PACKAGE_VERSION@/$(TARGET_VERSION)/'\
-	             -e 's/@_PACKAGE_NAME@/$(TARGET_MODULE)/' -i dkms.conf
+	             -e 's/@_PACKAGE_NAME@/$(TARGET_MODULE)/' dkms.conf.tmpl >dkms.conf
 	@sudo -E mkdir -p /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
 	@sudo -E cp -Rf * /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)/
 	@sudo -E dkms add -m $(TARGET_MODULE) -v $(TARGET_VERSION)
 	@sudo -E dkms install $(TARGET_MODULE) -v $(TARGET_VERSION)
 
 dkms-clean:
-	-$(shell for res in `ls /usr/src/ | grep $(TARGET_MODULE) | sed 's|-|/|g'` ; do sudo -E dkms remove -m $$res --all ; done)
+	@$(foreach r,  $(shell ls /usr/src/ | grep $(TARGET_MODULE) | sed 's|-|/|g'), sudo -E dkms remove -m $r --all;)
 	-sudo -E rm -rf /usr/src/$(TARGET_MODULE)-$(TARGET_VERSION)
 
