@@ -40,7 +40,6 @@ function configure() {
 }
 
 function build() {
-	return 0
 	echo "Building  linux-${kernel_ver} for $1"
 	if [ $1 == "amd64" ]; then
 		cd ${ws}/kbuild/amd64
@@ -55,11 +54,6 @@ function build() {
 }
 
 function build_cdapci() {
-	echo "${ws} --> ${drvr_path}"
-	ls -l ${ws}
-	ls -l ${ws}/.. 
-	ls -l ${drvr_path}
-	return 0
 	cp ${ws}/lincda.mk ${drvr_path}
 	cd ${drvr_path}
 	make -f lincda.mk clean
@@ -79,28 +73,28 @@ function build_cdapci() {
 
 download_and_extract
 rv=$?
-[ $rv != 0 ] && echo "error downloading/extracting kernel src" && exit
+[ $rv != 0 ] && echo "error downloading/extracting kernel src" && exit -1
 #compile and build for arm
 configure arm64
 rv=$?
-[ $rv != 0 ] && echo "error configuring kernel" && exit
+[ $rv != 0 ] && echo "error configuring kernel" && exit -1
 build arm64
 rv=$?
-[ $rv != 0 ] && echo "error building  kernel" && exit
+[ $rv != 0 ] && echo "error building  kernel" && exit -1
 build_cdapci arm64
 rv=$?
-[ $rv != 0 ] && echo "error building  cdapci kernel module " && exit
+[ $rv != 0 ] && echo "error building  cdapci kernel module " && exit -1
 echo "cdapci driver compiled successfully. output placed in ${ws}/output with appended architecture"
 
 #compile and build for amd64
 configure amd64
 rv=$?
-[ $rv != 0 ] && echo "error configuring kernel" && exit
+[ $rv != 0 ] && echo "error configuring kernel" && exit -1
 build amd64
 rv=$?
-[ $rv != 0 ] && echo "error building  kernel" && exit
+[ $rv != 0 ] && echo "error building  kernel" && exit -1
 build_cdapci amd64
 rv=$?
-[ $rv != 0 ] && echo "error building  cdapci kernel module " && exit
+[ $rv != 0 ] && echo "error building  cdapci kernel module " && exit -1
 echo "cdapci driver compiled successfully. output placed in ${ws}/output with appended architecture"
-exit
+exit 
