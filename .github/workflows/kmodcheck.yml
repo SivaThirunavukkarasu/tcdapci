@@ -25,6 +25,6 @@ jobs:
 
     - name: Compile kernel version ${{ github.event.inputs.kernel-version }} and cdapci module
       run: |
-        ls -l ${{ github.workspace }}/workspace
-        #cd ${{ github.workspace }}/workspace/testscripts
-        #./lincdacompile.sh ${{ github.event.inputs.kernel-version }} ${{ github.workspace }}/workspace/src
+        #ls -l ${{ github.workspace }}/workspace
+        cd ${{ github.workspace }}/workspace/testscripts
+        ./lincdacompile.sh ${{ github.event.inputs.kernel-version }} ${{ github.workspace }}/workspace/src
