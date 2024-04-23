@@ -48,8 +48,8 @@ function build() {
 }
 
 function build_cdapci() {
-	cp ${ws}/lincda.mk ${drvr_path}/src
-	cd ${drvr_path}/src
+	cp ${ws}/lincda.mk ${drvr_path}
+	cd ${drvr_path}
 	make -f lincda.mk clean
 	if [ $1 == "amd64" ]; then
 		make -f lincda.mk KERNEL_SRC=${ws}/kbuild/amd64 all
