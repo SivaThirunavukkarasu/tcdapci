@@ -23,7 +23,7 @@ jobs:
          ref: kmodcomp
          path: workspace
 
-    - name: Call the script with kernel version and driver path
+    - name: Compile kernel and cdapci module
       run: |
         #ls -l ${{ github.workspace }}/workspace
         cd ${{ github.workspace }}/workspace/testscripts
