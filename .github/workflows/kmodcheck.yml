@@ -27,4 +27,4 @@ jobs:
       run: |
         #ls -l ${{ github.workspace }}/workspace
         cd ${{ github.workspace }}/workspace/testscripts
-        ./lincdacompile.sh ${{ github.event.inputs.kernel-version }} ${{ github.workspace }}/src
+        ./lincdacompile.sh ${{ github.event.inputs.kernel-version }} ${{ github.workspace }}/workspace/src
