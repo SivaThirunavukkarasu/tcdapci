@@ -1,4 +1,4 @@
-name: kernel compilation automation
+name: driver & kernel compilation check
 
 on:
   workflow_dispatch:
@@ -25,6 +25,6 @@ jobs:
 
     - name: Call the script with kernel version and driver path
       run: |
-        ls -l ${{ github.workspace }}/workspace
-        # cd ${{ github.workspace }}/workspace/testscripts
-        #./lincdacompile.sh ${{ github.events.inputs.kernel-version }} ${{ github.workspace }}/src
+        #ls -l ${{ github.workspace }}/workspace
+        cd ${{ github.workspace }}/workspace/testscripts
+        ./lincdacompile.sh ${{ github.events.inputs.kernel-version }} ${{ github.workspace }}/src
