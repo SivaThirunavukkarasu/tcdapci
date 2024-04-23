@@ -40,7 +40,7 @@ function configure() {
 }
 
 function build() {
-	return
+	return 0
 	echo "Building  linux-${kernel_ver} for $1"
 	if [ $1 == "amd64" ]; then
 		cd ${ws}/kbuild/amd64
