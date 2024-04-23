@@ -1,0 +1,30 @@
+name: kernel compilation automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel-version:
+        description: "kernel version to be compiled with"
+        type: string
+        required: true
+        default: "6.4"
+
+jobs:
+  ORCA-compilation-test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install prerequisites 
+      run: |
+          sudo apt update
+          sudo apt install
+    - name: Checkout repo
+      uses: actions/checkout@v3
+      with:
+         ref: kmodcomp
+         path: workspace
+
+    - name: Call the script with kernel version and driver path
+      run: |
+        ls -l ${{ github.workspace }}/workspace
+        # cd ${{ github.workspace }}/workspace/testscripts
+        #./lincdacompile.sh ${{ github.events.inputs.kernel-version }} ${{ github.workspace }}/src
