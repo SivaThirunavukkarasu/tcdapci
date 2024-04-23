@@ -40,6 +40,7 @@ function configure() {
 }
 
 function build() {
+	return
 	echo "Building  linux-${kernel_ver} for $1"
 	if [ $1 == "amd64" ]; then
 		cd ${ws}/kbuild/amd64
@@ -54,6 +55,10 @@ function build() {
 }
 
 function build_cdapci() {
+	echo "${ws} --> ${drvr_path}"
+	ls -l ${ws}
+	ls -l ${drvr_path}
+	return 0
 	cp ${ws}/lincda.mk ${drvr_path}
 	cd ${drvr_path}
 	make -f lincda.mk clean
