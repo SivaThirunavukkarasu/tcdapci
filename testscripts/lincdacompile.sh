@@ -57,8 +57,8 @@ function build() {
 function build_cdapci() {
 	echo "${ws} --> ${drvr_path}"
 	ls -l ${ws}
-	ls -l ../${ws} 
-	ls -l ${ws}/src
+	ls -l ${ws}/.. 
+	ls -l ${ws}/../.. 
 	return 0
 	cp ${ws}/lincda.mk ${drvr_path}
 	cd ${drvr_path}
