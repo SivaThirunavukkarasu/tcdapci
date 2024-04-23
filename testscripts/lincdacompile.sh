@@ -16,34 +16,40 @@ function download_and_extract() {
 	rv=$?
 	[ $rv != 0 ] && return 1
 	cd ${ws}/src
-	tar -xvf ${ws}/download/linux-${kernel_ver}.tar.xz
+	echo "extracting kernel sources"
+	tar -xvf ${ws}/download/linux-${kernel_ver}.tar.xz 2>/dev/null 1>/dev/null
 	[ $rv != 0 ] && return 1
+	echo "extracting kernel done"
 	return 0
 }
 
 function configure() {
 	cd ${ws}/src/linux-${kernel_ver}
+	echo "configuring  linux-${kernel_ver}"
 	if [ $1 == "amd64" ];then
 		[ -f ${ws}/kbuild/amd64/.config ] && return 0
-		make ARCH=x86 O=${ws}/kbuild/amd64 x86_64_defconfig
+		make ARCH=x86 O=${ws}/kbuild/amd64 x86_64_defconfig 
 		[ $rv != 0 ] && echo "error configuring kernel" && return $rv
 	elif [ $1 == "arm64" ]; then
 		[ -f ${ws}/kbuild/amd64/.config ] && return 0
 		make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=${ws}/kbuild/arm64 defconfig
 		[ $rv != 0 ] && echo "error configuring kernel" && return $rv
 	fi
+	echo "configuration linux-${kernel_ver} done"
 	return 0
 }
 
 function build() {
+	echo "Building  linux-${kernel_ver} for $1"
 	if [ $1 == "amd64" ]; then
 		cd ${ws}/kbuild/amd64
-		make ARCH=x86 -j 4
+		make ARCH=x86 -j 4 
 	elif [ $1 == "arm64" ];then
 		cd ${ws}/kbuild/arm64
 		make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-  -j 4
 	fi
 	[ ! -f vmlinux ] && return 1
+	echo "Building  linux-${kernel_ver} done"
 	return 0
 }
 
