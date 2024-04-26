@@ -1,0 +1,30 @@
+name: orca driver compilation test with kernel-version ${{ github.event.inputs.kernel-version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel-version:
+        description: "kernel version to be compiled with"
+        type: string
+        required: true
+        default: "6.4"
+
+jobs:
+  ORCA-compilation-test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install prerequisites 
+      run: |
+          sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev gcc-aarch64-linux-gnu fakeroot
+          sudo apt update
+    - name: Checkout repo
+      uses: actions/checkout@v3
+      with:
+         ref: kmodcomp
+         path: workspace
+
+    - name: Compile kernel version ${{ github.event.inputs.kernel-version }} and cdapci module
+      run: |
+        #ls -l ${{ github.workspace }}/workspace
+        cd ${{ github.workspace }}/workspace/testscripts
+        ./lincdacompile.sh ${{ github.event.inputs.kernel-version }} ${{ github.workspace }}/workspace/src
