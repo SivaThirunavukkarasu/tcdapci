@@ -20,7 +20,6 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v3
       with:
-         ref: kmodcomp
          path: workspace
 
     - name: Compile kernel version ${{ github.event.inputs.kernel-version }} and cdapci module
