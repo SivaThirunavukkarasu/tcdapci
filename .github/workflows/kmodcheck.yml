@@ -1,4 +1,4 @@
-name: orca driver compilation test with kernel-version ${{ github.event.inputs.kernel-version }}
+run-name: orca driver compilation test with kernel-version ${{ github.event.inputs.kernel-version }}
 
 on:
   workflow_dispatch:
