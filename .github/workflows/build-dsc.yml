@@ -61,8 +61,9 @@ jobs:
            ls -l ${{ github.workspace }}
            ls -l ${{ github.workspace }}/workspace
         working-directory: ${{ github.workspace }}/workspace
-      #- name: upload the debian pkg
-      #  uses: actions/upload-artifact@v3
-      #  with:
-      #    name: cdapci
-      #    path: ${{ github.workspace }}/cdapci
+      - name: upload the debian pkg
+        uses: actions/upload-artifact@v3
+        with:
+          name: cdapci
+          path: ${{ github.workspace }}/cdapci-dkms_${{ steps.version.outputs.VERSION}}_all.deb
+      
