@@ -45,16 +45,16 @@ jobs:
       - name: Report package version
         run: echo "Version ${{ steps.version.outputs.VERSION }} sourced from src/cdadrv.c"
         working-directory: ${{ github.workspace }}/workspace
-      - name: Update debian changelog
-        run: |
-          dch --newversion ${{ steps.version.outputs.VERSION }} --controlmaint "${{ github.event.inputs.changelog-description }}"
-          dch --release --controlmaint ""
-          git add debian/changelog
-          git tag -a ${{ steps.version.outputs.VERSION }} -m '${{ github.event.inputs.changelog-description }}'
-          git commit -m "Automated update of changelog file."
-          git push
-          git push --tags
-        working-directory: ${{ github.workspace }}/workspace
+      #- name: Update debian changelog
+      #  run: |
+      #    dch --newversion ${{ steps.version.outputs.VERSION }} --controlmaint "${{ github.event.inputs.changelog-description }}"
+      #    dch --release --controlmaint ""
+      #    git add debian/changelog
+      #    git tag -a ${{ steps.version.outputs.VERSION }} -m '${{ github.event.inputs.changelog-description }}'
+      #    git commit -m "Automated update of changelog file."
+      #    git push
+      #    git push --tags
+      #  working-directory: ${{ github.workspace }}/workspace
       - name: Build package
         run: |
            debuild -b
