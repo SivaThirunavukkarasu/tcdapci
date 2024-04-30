@@ -21,22 +21,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: workspace
-      - name: Check out target repository code
-        uses: actions/checkout@v2
-        with:
-          path: target
-          repository: DeGirum/DeGirum.github.io
-          token: ${{ secrets.PRIVATE_TOKEN }}
-      - name: Prepare repository build
-        run: |
-          rm -rf ${{ github.workspace }}/target/docs/apt-repo
-          mv ${{ github.workspace }}/workspace/repository-setup ${{ github.workspace }}/target/docs/apt-repo
-      - name: Import GPG key
-        id: import_gpg
-        uses: crazy-max/ghaction-import-gpg@v5
-        with:
-          gpg_private_key: ${{ secrets.DRIVER_GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
       - name: Retrieve package version
         run: |
           echo "VERSION=$(grep "^MODULE_VERSION" src/cdadrv.c | cut -c 17-23)" >> "$GITHUB_OUTPUT"
@@ -45,21 +29,19 @@ jobs:
       - name: Report package version
         run: echo "Version ${{ steps.version.outputs.VERSION }} sourced from src/cdadrv.c"
         working-directory: ${{ github.workspace }}/workspace
-      #- name: Update debian changelog
-      #  run: |
-      #    dch --newversion ${{ steps.version.outputs.VERSION }} --controlmaint "${{ github.event.inputs.changelog-description }}"
-      #    dch --release --controlmaint ""
-      #    git add debian/changelog
-      #    git tag -a ${{ steps.version.outputs.VERSION }} -m '${{ github.event.inputs.changelog-description }}'
-      #    git commit -m "Automated update of changelog file."
-      #    git push
-      #    git push --tags
-      #  working-directory: ${{ github.workspace }}/workspace
-      - name: Build package
+      - name: Update debian changelog
         run: |
-           debuild -b
-           ls -l ${{ github.workspace }}
-           ls -l ${{ github.workspace }}/workspace
+          exit 0 #skip
+          dch --newversion ${{ steps.version.outputs.VERSION }} --controlmaint "${{ github.event.inputs.changelog-description }}"
+          dch --release --controlmaint ""
+          git add debian/changelog
+          git tag -a ${{ steps.version.outputs.VERSION }} -m '${{ github.event.inputs.changelog-description }}'
+          git commit -m "Automated update of changelog file."
+          git push
+          git push --tags
+        working-directory: ${{ github.workspace }}/workspace
+      - name: Build package
+        run: debuild -b
         working-directory: ${{ github.workspace }}/workspace
       - name: upload the debian pkg
         uses: actions/upload-artifact@v3
