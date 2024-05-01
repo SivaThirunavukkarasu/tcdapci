@@ -1,3 +1,5 @@
+#!/usr/bin/bash
+i
 #Would be run on a new vm instance everytime. So no need to clean up
 
 [ $# != 2 ] && echo "$0 <kernel_version> <drvr_path>" && exit
