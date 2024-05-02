@@ -37,7 +37,6 @@ jobs:
         working-directory: ${{ github.workspace }}/workspace
       - name: Update debian changelog
         run: |
-          exit 0 #skip
           dch --newversion ${{ steps.version.outputs.VERSION }} --controlmaint "${{ github.event.inputs.changelog-description }}"
           dch --release --controlmaint ""
           git add debian/changelog
