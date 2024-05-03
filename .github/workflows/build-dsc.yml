@@ -21,16 +21,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: workspace
-      - name: Check out target repository code
-        uses: actions/checkout@v2
-        with:
-          path: target
-          repository: DeGirum/DeGirum.github.io
-          token: ${{ secrets.PRIVATE_TOKEN }}
-      - name: Prepare repository build
-        run: |
-          rm -rf ${{ github.workspace }}/target/docs/apt-repo
-          mv ${{ github.workspace }}/workspace/repository-setup ${{ github.workspace }}/target/docs/apt-repo
       - name: Import GPG key
         id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v5
@@ -58,17 +48,9 @@ jobs:
       - name: Build package
         run: debuild -b
         working-directory: ${{ github.workspace }}/workspace
-      - name: Build repository
-        run: reprepro -V --basedir ${{ github.workspace }}/target/docs/apt-repo includedeb ORCA ${{ github.workspace }}/cdapci-dkms_${{ steps.version.outputs.VERSION }}_all.deb
-        working-directory: ${{ github.workspace }}/target/docs/apt-repo
-      - name: Clean up repository build files
-        run: |
-          rm -rf ${{ github.workspace }}/target/docs/apt-repo/db
-          rm -rf ${{ github.workspace }}/target/docs/apt-repo/conf
-      - name: Commit results
-        run: |
-          git switch -c apt-staging-branch
-          git add *
-          git commit -am "Automated diver source package commit."
-          git push --set-upstream origin apt-staging-branch
-        working-directory: ${{ github.workspace }}/target
+      - name: upload the debian pkg
+        uses: actions/upload-artifact@v3
+        with:
+          name: cdapci
+          path: ${{ github.workspace }}/cdapci-dkms_${{ steps.version.outputs.VERSION}}_all.deb
+      
