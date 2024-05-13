@@ -45,12 +45,14 @@ struct cda_bar {
 	struct bin_attribute mmap_attr;
 };
 #else
-#if __has_attribute(__fallthrough__)
-# define fallthrough                    __attribute__((__fallthrough__))
+#if defined __has_attribute 
+# if __has_attribute (__fallthrough__)
+#  define fallthrough                    __attribute__((__fallthrough__))
+# endif
 #else
 # define fallthrough                    do {} while (0)  /* fallthrough */
-#endif
-#endif
+#endif //has_attribute
+#endif // LINUX_VERSION_CODE
 
 static int cda_alloc_msix(struct cda_dev *cdadev, uint32_t rvecs, struct cda_interrupts *ints)
 {

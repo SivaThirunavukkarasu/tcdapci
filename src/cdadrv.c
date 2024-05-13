@@ -10,6 +10,7 @@
 #include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/init.h>
+#include <linux/fs.h>
 
 #include "cdadrv.h"
 #include "cdaioctl.h"
@@ -17,10 +18,10 @@
 MODULE_AUTHOR("DeGirum Corp., Egor Pomozov");
 MODULE_DESCRIPTION("CDA linux driver to access pci devices");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.0.1");
+MODULE_VERSION("0.5.0.2");
 // The version has to be in the format n.n.n.n, where each n is a single digit
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4,9,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
 #error Too old kernel
 #endif
 
@@ -106,7 +107,7 @@ static void cdadev_free(struct cda_dev *cdadev)
 static int cdadev_init(struct cda_dev *cdadev)
 {
     // Create and initialize device structures
-	int ret;
+	int ret = -ENOMEM;
 	struct device *dev = &cdadev->dev;
 	device_initialize(dev);
 

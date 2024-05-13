@@ -23,7 +23,8 @@
 
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,6,0)
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 /**
  * pin_user_pages_fast() - pin user pages in memory without taking locks
  *
@@ -399,6 +400,11 @@ static int mblk_mmap( struct file *file,
 	return 0;
 }
 
+void cda_hide_memmap(struct cda_mmap *memmap);
+int cda_publish_memmap(struct cda_mmap *memmap);
+void cda_hide_mblk(struct cda_mblk *mblk);
+int cda_publish_mblk(struct cda_mblk *mblk);
+
 int cda_publish_mblk(struct cda_mblk *mblk)
 {
 	int ret;
@@ -426,6 +432,7 @@ err_add:
 	kobject_put(&mblk->kobj);
 	return ret;
 }
+
 
 void cda_hide_mblk(struct cda_mblk *mblk)
 {
