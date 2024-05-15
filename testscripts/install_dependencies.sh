@@ -19,5 +19,5 @@ if [ "x$majno" == "x5" ] && [ $minno -gt 5 ]; then
 fi
 echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu focal main universe" | sudo tee -a /etc/apt/sources.list
 sudo apt update
-sudo apt-get install gcc-8 g++-8 gcc-8-aarch64-linux-gnu libelf-dev
+sudo apt-get install gcc-8 g++-8 gcc-8-aarch64-linux-gnu libelf-dev make
 sudo update-alternatives --install /usr/bin/aarch64-linux-gnu-gcc aarch64-linux-gnu-gcc /usr/bin/aarch64-linux-gnu-gcc-8 10

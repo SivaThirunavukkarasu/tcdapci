@@ -48,7 +48,7 @@ function getpatchfiles() {
 		if [ ${min} -gt 16 ]; then
 			echo -ne " dtc_1.patch elf.patch"
 		else
-			echo -ne " dtc_2.patch elf.patch"
+			echo -ne " dtc_2.patch elf.patch log2_gcc7.patch"
 		fi
 		if [ ${min} -gt 18 ]; then
 			echo -ne " cf_protection.patch"
