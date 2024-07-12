@@ -1,0 +1,17 @@
+cdapci-dkms (0.5.0.1) jammy; urgency=medium
+
+  * Updated versioning scheme.
+
+ -- Alexander Bolotov <bolotov@degirum.com>  Wed, 06 Sep 2023 23:59:06 +0000
+
+cdapci-dkms (0.5) jammy; urgency=medium
+
+  * Updated packaging and DKMS.
+
+ -- Alexander Bolotov <bolotov@degirum.com>  Wed, 26 Jul 2023 22:47:25 +0000
+
+cdapci-dkms (0.1) bionic; urgency=medium
+
+  * Initial Release.
+
+ -- Alexander Bolotov <bolotov@degirum.com>  Tue, 01 Mar 2022 14:58:36 -0800

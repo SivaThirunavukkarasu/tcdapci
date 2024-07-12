@@ -1,0 +1,56 @@
+name: Debian Source Package and Repository build
+on:
+  workflow_dispatch:
+    inputs:
+      changelog-description:
+        description: "Description of changes for debian changelog file and Github tag."
+        type: string
+        required: true
+        default: ""
+jobs:
+  Build-DSC-Repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install prerequisites and set up git
+        run: |
+          sudo apt update
+          sudo apt install gnupg dput dh-make devscripts lintian dpkg-dev reprepro dkms
+          git config --global user.name 'Alexander Bolotov'
+          git config --global user.email 'bolotov@degirum.com'
+      - name: Check out repository code
+        uses: actions/checkout@v2
+        with:
+          path: workspace
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.DRIVER_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.DRIVER_GPG_PASSPHRASE }}
+      - name: Retrieve package version
+        run: |
+          echo "VERSION=$(grep "^MODULE_VERSION" src/cdadrv.c | cut -c 17-23)" >> "$GITHUB_OUTPUT"
+        id: version
+        working-directory: ${{ github.workspace }}/workspace
+      - name: Report package version
+        run: echo "Version ${{ steps.version.outputs.VERSION }} sourced from src/cdadrv.c"
+        working-directory: ${{ github.workspace }}/workspace
+      - name: Update debian changelog
+        run: |
+          dch --newversion ${{ steps.version.outputs.VERSION }} --controlmaint "${{ github.event.inputs.changelog-description }}"
+          dch --release --controlmaint ""
+          git add debian/changelog
+          git tag -a ${{ steps.version.outputs.VERSION }} -m '${{ github.event.inputs.changelog-description }}'
+          git commit -m "Automated update of changelog file."
+          git push
+          git push --tags
+        working-directory: ${{ github.workspace }}/workspace
+      - name: Build package
+        run: debuild -b
+        working-directory: ${{ github.workspace }}/workspace
+      - name: upload the debian pkg
+        uses: actions/upload-artifact@v3
+        with:
+          name: cdapci
+          path: ${{ github.workspace }}/cdapci-dkms_${{ steps.version.outputs.VERSION}}_all.deb
+      

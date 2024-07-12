@@ -1,0 +1,29 @@
+run-name: orca driver compilation test with kernel-version ${{ github.event.inputs.kernel-version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel-version:
+        description: "kernel version to be compiled with"
+        type: string
+        required: true
+        default: "6.4"
+
+jobs:
+  ORCA-compilation-test:
+    runs-on: ubuntu-20.04
+    steps:
+    
+    - name: Checkout repo
+      uses: actions/checkout@v3
+      with:
+         path: workspace
+    - name: Install compilation tools
+      run: |
+          cd ${{ github.workspace }}/workspace/testscripts
+          ./install_dependencies.sh ${{ github.event.inputs.kernel-version }}
+    - name: Compile kernel version ${{ github.event.inputs.kernel-version }} and cdapci module
+      run: |
+        #ls -l ${{ github.workspace }}/workspace
+        cd ${{ github.workspace }}/workspace/testscripts
+        ./lincdacompile.sh ${{ github.event.inputs.kernel-version }} ${{ github.workspace }}/workspace/src
