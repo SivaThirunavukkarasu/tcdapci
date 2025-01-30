@@ -8,19 +8,21 @@ jobs:
     strategy:
       matrix:
         node-version: [14, 16, 18]
+        os-ver: [ dg-ubuntu-20.04-cs, dg-ubuntu-20.04-arm, dg-apple-m1]
         
         include:
+          - pkg: ""
           - node-version: 18
             custom-var: "ARM_BUILD_OPT"
           - node-version: 16
-            custom-var: "DEB"
+            pkg: "DEB"
             custom-v1: "v1"
           - node-version: 18
-            custom-pkg: "DEB"
+            pkg: "DEB"
 
     steps:
       - name: Print Scoped Variable
         if: >
-          (contains(matrix.custom-pkg,'DEB') || contains(matrix.custom-var,'DEB')) &&  
-          contains(matrix.custom-v1,'v1')      
+          contains(matrix.pkg,'DEB') && contains(matrix.node-version,'16') &&  
+          (contains(matrix.os-ver,'dg-ubuntu-20.04-cs') || contains(matrix.os-ver,'dg-ubuntu-20.04-arm'))      
         run: echo "Node version ${{ matrix.node-version }} - Custom Var ${{ matrix.custom-var }}"
