@@ -5,22 +5,20 @@ on:
 env:
   ARM_BUILD_OPT: "-DARM"
   X86_BUILD_OPT: "-Dx86"
+
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [14, 16, 18]
-       
         
         include:
-          
-          
           - node-version: 18
-            custom-var: ${{ env.ARM_BUILD_OPT }}
+            custom-var: "${{ env.ARM_BUILD_OPT }}"
           - node-version: 16
-            custom-var: ${{ env.X86_BUILD_OPT }}
+            custom-var: "${{ env.X86_BUILD_OPT }}"
 
     steps:
       - name: Print Scoped Variable
-        run: echo "Node version ${{ matrix.node-version }} - Custom Var ${{ matrix.custom-var }} matrix ${{ toJSON(matrix) }}"
+        run: echo "Node version ${{ matrix.node-version }} - Custom Var ${{ matrix.custom-var }}"
