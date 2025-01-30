@@ -1,0 +1,9 @@
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [14, 16, 18]
+      steps:
+        - name: Print Node Version
+          run: echo "Node version: ${{ matrix.node-version }}"
