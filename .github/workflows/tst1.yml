@@ -2,10 +2,6 @@ name: Matrix Build with Scoped Variables
 on:
   workflow_dispatch:
 
-env:
-  ARM_BUILD_OPT: "-DARM"
-  X86_BUILD_OPT: "-Dx86"
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -15,9 +11,9 @@ jobs:
         
         include:
           - node-version: 18
-            custom-var: "${{ env.ARM_BUILD_OPT }}"
+            custom-var: "env.ARM_BUILD_OPT"
           - node-version: 16
-            custom-var: "${{ env.X86_BUILD_OPT }}"
+            custom-var: "env.X86_BUILD_OPT"
 
     steps:
       - name: Print Scoped Variable
