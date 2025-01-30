@@ -11,4 +11,4 @@ jobs:
 
     steps:      
       - name: Debug Matrix Output
-        run: echo "Matrix content ${{ toJSON(matrix) }}"
+        run: echo "Matrix content ${{ toJSON(matrix) }} Node version  ${{ matrix.node-version }}"
