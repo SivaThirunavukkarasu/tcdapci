@@ -8,12 +8,14 @@ jobs:
     strategy:
       matrix:
         node-version: [14, 16, 18]
-        custom-var: ["value-for-14", "value-for-16", "value-for-18"]
+        
         include:
+          - armbuildopt: "-DARM"
+          - x86opt: "-Dx86"
           - node-version: 14
-            custom-var: "special-14"
+            custom-var: ${{ x86opt }}
           - node-version: 16
-            custom-var: "special-16"
+            custom-var: ${{ armbuildopt }}
           - node-version: 18
             custom-var: "special-18"
 
