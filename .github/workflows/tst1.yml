@@ -20,5 +20,7 @@ jobs:
 
     steps:
       - name: Print Scoped Variable
-        if: ${{ (matrix.custom-pkg == 'DEB' || matrix.custom-var == 'DEB') &&  matrix.custom-v1 == "v1"  }}      
+        if: >
+          (contains(matrix.custom-pkg,'DEB') || contains(matrix.custom-var,'DEB') &&  
+          contains(matrix.custom-v1,'v1')      
         run: echo "Node version ${{ matrix.node-version }} - Custom Var ${{ matrix.custom-var }}"
