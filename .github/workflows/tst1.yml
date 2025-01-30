@@ -11,11 +11,14 @@ jobs:
         
         include:
           - node-version: 18
-            custom-var: "env.ARM_BUILD_OPT"
+            custom-var: "ARM_BUILD_OPT"
           - node-version: 16
-            custom-var: "env.X86_BUILD_OPT"
+            custom-var: "DEB"
+            custom-v1: "v1"
+          - node-version: 18
+            custom-pkg: "DEB"
 
     steps:
       - name: Print Scoped Variable
-        if: ${{ matrix.node-version == 14 }}
+        if: ${{ {matrix.custom-pkg == "DEB" || matrix.custom-var == "DEB"} && { matrix.custom-v1 == "v1"} }}      
         run: echo "Node version ${{ matrix.node-version }} - Custom Var ${{ matrix.custom-var }}"
