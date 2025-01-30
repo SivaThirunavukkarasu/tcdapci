@@ -17,4 +17,5 @@ jobs:
 
     steps:
       - name: Print Scoped Variable
+        if: ${{ matrix.node-version == 14 }}
         run: echo "Node version ${{ matrix.node-version }} - Custom Var ${{ matrix.custom-var }}"
