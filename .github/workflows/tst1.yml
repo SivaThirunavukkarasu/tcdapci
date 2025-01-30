@@ -12,13 +12,9 @@ jobs:
         include:
           - armbuildopt: "-DARM"
           - x86opt: "-Dx86"
-          - node-version: 14
-            custom-var: ${{ matrix.x86opt }}
-          - node-version: 16
-            custom-var: ${{ matrix.armbuildopt }}
           - node-version: 18
             custom-var: "special-18"
 
     steps:
       - name: Print Scoped Variable
-        run: echo "Node version ${{ matrix.node-version }} - Custom Var ${{ matrix.custom-var }}"
+        run: echo "Node version ${{ matrix.node-version }} - Custom Var ${{ matrix.custom-var }} matrix ${{ toJSON(matrix) }}"
