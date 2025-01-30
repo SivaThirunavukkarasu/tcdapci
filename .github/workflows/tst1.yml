@@ -13,9 +13,9 @@ jobs:
           - armbuildopt: "-DARM"
           - x86opt: "-Dx86"
           - node-version: 14
-            custom-var: ${{ x86opt }}
+            custom-var: ${{ matrix.x86opt }}
           - node-version: 16
-            custom-var: ${{ armbuildopt }}
+            custom-var: ${{ matrix.armbuildopt }}
           - node-version: 18
             custom-var: "special-18"
 
