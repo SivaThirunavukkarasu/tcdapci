@@ -13,7 +13,9 @@ jobs:
           - armbuildopt: "-DARM"
           - x86opt: "-Dx86"
           - node-version: 18
-            custom-var: "special-18"
+            custom-var: ${{ matrix.armbuildopt }}"
+          - node-version: 16
+            custom-var: ${{ matrix.x86opt }}"
 
     steps:
       - name: Print Scoped Variable
